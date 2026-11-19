@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/setup-db.mjs)",
+      "Bash(node --env-file=.env.local scripts/setup-db.mjs)",
+      "Bash(nslookup db.kontahtvwdqrurswcxat.supabase.co)",
+      "Bash(ping db.kontahtvwdqrurswcxat.supabase.co)",
+      "Bash(nslookup aws-0-eu-central-1.pooler.supabase.com)",
+      "Bash(psql \"postgresql://postgres:Ortolano23jk,@db.kontahtvwdqrurswcxat.supabase.co:5432/postgres\" -c \"SELECT version\\(\\);\")",
+      "Bash(nslookup -query=A db.kontahtvwdqrurswcxat.supabase.co)",
+      "Bash(curl -s \"https://db.kontahtvwdqrurswcxat.supabase.co\" --connect-timeout 5)",
+      "Bash(dig +short db.kontahtvwdqrurswcxat.supabase.co A)",
+      "Bash(claude mcp *)",
+      "Bash(claude /mcp)",
+      "Bash(claude /login)",
+      "Bash(npx skills *)",
+      "Bash(supabase --version)",
+      "Bash(curl -so /dev/null -w \"%{http_code}\" https://mcp.supabase.com/mcp)",
+      "Bash(ping -4 db.kontahtvwdqrurswcxat.supabase.co)",
+      "Bash(ping -6 db.kontahtvwdqrurswcxat.supabase.co)",
+      "Bash(curl -s \"https://supabase.com/dashboard/project/kontahtvwdqrurswcxat/settings/database\")",
+      "Bash(curl -s \"https://mcp.supabase.com/mcp?project_ref=kontahtvwdqrurswcxat\" -H \"Accept: application/json\")",
+      "Bash(psql \"postgresql://postgres:Ortolano23jk,@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true\" -c \"SELECT version\\(\\);\")",
+      "Bash(curl -sL \"https://supabase.com/dashboard/project/kontahtvwdqrurswcxat/settings/database\")",
+      "Read(//c/Users/anton/.supabase/**)",
+      "Bash(curl -s \"https://api.supabase.com/v1/projects/kontahtvwdqrurswcxat\" -H \"Authorization: Bearer $\\(cat ~/.supabase/access-token || echo ''\\)\")"
+    ]
+  }
+}

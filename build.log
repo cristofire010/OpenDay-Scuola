@@ -1,0 +1,45 @@
+▲ Next.js 16.4.6 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.mjs took 65ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.0s
+  Running TypeScript ...
+  Finished TypeScript in 10.4s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/9) ...
+  Generating static pages using 11 workers (2/9) 
+  Generating static pages using 11 workers (4/9) 
+  Generating static pages using 11 workers (6/9) 
+✓ Generating static pages using 11 workers (9/9) in 533ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ○ /accesso
+├ ƒ /admin
+├ ƒ /admin/accesso
+├ ƒ /api/admin/tutors
+├ ƒ /api/admin/tutors/[id]
+├ ƒ /api/assignments
+├ ƒ /api/assignments/[id]/status
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/staff/archive
+├ ƒ /api/staff/overview
+├ ƒ /api/tutor/arrivals
+├ ƒ /api/tutor/completion
+├ ƒ /api/tutor/roster
+├ ƒ /api/tutor/scan
+├ ƒ /archivio
+├ ƒ /assegnazione/[id]
+├ ƒ /join
+├ ƒ /staff
+├ ƒ /tutor
+└ ƒ /tutor/scan/[id]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

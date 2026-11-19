@@ -1,0 +1,194 @@
+[
+  {
+    "slug": "luce-in-scena",
+    "number": "01",
+    "title": "Luce in scena",
+    "shortDescription": "Scomponi un raggio, inverti il percorso e scopri che il bianco non è mai solo bianco.",
+    "description": "Un banco di ottica per giocare con raggi, prismi e lenti. Costruirai uno spettro, proverai a ricomporlo e vedrai come cambia il percorso della luce quando cambia il mezzo che attraversa.",
+    "question": "Possiamo separare i colori nascosti dentro una luce che sembra bianca?",
+    "image": "/images/esperimento-luce.webp",
+    "imageAlt": "Un prisma di vetro scompone un raggio luminoso nei colori dello spettro",
+    "category": "Luce e suono",
+    "duration": "20 min",
+    "age": "11–16 anni",
+    "station": "A1",
+    "room": "Laboratorio Ottica · Piano 1",
+    "meetingPoint": "Accoglienza, sotto il cartello blu A1",
+    "directions": "Dall’ingresso segui la linea blu, sali al primo piano e gira a sinistra. A1 è il primo banco vicino alla finestra.",
+    "guide": "Giulia Rinaldi",
+    "guideRole": "Tutor · 4ªB",
+    "guideInitials": "GR",
+    "accent": "blu",
+    "materials": [
+      "Prisma in vetro",
+      "Ray box a LED",
+      "Lenti convergenti",
+      "Schermo millimetrato"
+    ],
+    "steps": [
+      "Osserva il raggio incidente",
+      "Ruota il prisma e misura la deviazione",
+      "Ricomponi lo spettro con una seconda lente"
+    ]
+  },
+  {
+    "slug": "il-suono-si-vede",
+    "number": "02",
+    "title": "Il suono si vede",
+    "shortDescription": "Una piastra, un pizzico di sabbia e una frequenza: le onde prendono forma davanti a te.",
+    "description": "Con le piastre di Chladni trasformiamo una vibrazione in un disegno. Variando la frequenza vedrai comparire nodi e ventri, e potrai collegare la forma osservata al modo in cui il materiale vibra.",
+    "question": "Che forma ha una nota quando la possiamo osservare?",
+    "image": "/images/esperimento-suono.webp",
+    "imageAlt": "La sabbia su una piastra di Chladni forma un disegno geometrico",
+    "category": "Luce e suono",
+    "duration": "20 min",
+    "age": "11–16 anni",
+    "station": "A2",
+    "room": "Laboratorio Ottica · Piano 1",
+    "meetingPoint": "Accoglienza, sotto il cartello blu A2",
+    "directions": "Segui la linea blu fino al primo piano. A2 è il secondo banco sulla sinistra, accanto ad A1.",
+    "guide": "Nicolò Conti",
+    "guideRole": "Tutor · 5ªA",
+    "guideInitials": "NC",
+    "accent": "blu",
+    "materials": [
+      "Piastra di Chladni",
+      "Generatore di frequenza",
+      "Sabbia fine",
+      "Microfono"
+    ],
+    "steps": [
+      "Distribuisci la sabbia sulla piastra",
+      "Cerca una frequenza di risonanza",
+      "Confronta i disegni a frequenze diverse"
+    ]
+  },
+  {
+    "slug": "moto-quasi-perfetto",
+    "number": "03",
+    "title": "Moto (quasi) perfetto",
+    "shortDescription": "Riduci l’attrito, misura il tempo e metti alla prova la prima legge della dinamica.",
+    "description": "Su una rotaia a cuscino d’aria un carrello può muoversi quasi senza attrito. Con due fotocellule raccoglierai tempi e posizioni per capire quando un moto è davvero uniforme.",
+    "question": "Che cosa succede a un corpo in movimento quando le forze si bilanciano?",
+    "image": "/images/esperimento-moto.webp",
+    "imageAlt": "Un carrello blu scorre su una rotaia a cuscino d’aria tra due fotocellule",
+    "category": "Moto",
+    "duration": "25 min",
+    "age": "12–17 anni",
+    "station": "B1",
+    "room": "Laboratorio Meccanica · Piano terra",
+    "meetingPoint": "Accoglienza, sotto il cartello arancione B1",
+    "directions": "Dall’ingresso segui la linea arancione lungo il corridoio centrale. B1 è nel Laboratorio Meccanica, primo banco a destra.",
+    "guide": "Sara Greco",
+    "guideRole": "Tutor · 4ªC",
+    "guideInitials": "SG",
+    "accent": "arancio",
+    "materials": [
+      "Rotaia a cuscino d’aria",
+      "Carrello",
+      "Due fotocellule",
+      "Cronometro digitale"
+    ],
+    "steps": [
+      "Metti in equilibrio la rotaia",
+      "Misura il tempo tra le fotocellule",
+      "Calcola la velocità e confronta le prove"
+    ]
+  },
+  {
+    "slug": "carica-elettrica",
+    "number": "04",
+    "title": "Carica!",
+    "shortDescription": "Elettrizza, avvicina, respingi: la forza invisibile diventa subito evidente.",
+    "description": "Con il generatore di Van de Graaff e alcuni elettroscopi esploriamo cariche, conduttori e isolanti. Una dimostrazione ad alta tensione, condotta in sicurezza dal tutor e dal docente.",
+    "question": "Perché due oggetti carichi possono respingersi senza nemmeno toccarsi?",
+    "image": "/images/esperimento-elettrostatica.webp",
+    "imageAlt": "Una studentessa tocca un generatore di Van de Graaff mentre i capelli si sollevano",
+    "category": "Elettricità",
+    "duration": "20 min",
+    "age": "11–17 anni",
+    "station": "B2",
+    "room": "Laboratorio Meccanica · Piano terra",
+    "meetingPoint": "Accoglienza, sotto il cartello arancione B2",
+    "directions": "Segui la linea arancione fino al Laboratorio Meccanica. B2 è il banco centrale con il generatore argentato.",
+    "guide": "Luca Ferri",
+    "guideRole": "Tutor · 5ªB",
+    "guideInitials": "LF",
+    "accent": "arancio",
+    "materials": [
+      "Generatore di Van de Graaff",
+      "Elettroscopio",
+      "Bacchette di vetro e PVC",
+      "Palline di polistirolo"
+    ],
+    "steps": [
+      "Osserva la separazione delle cariche",
+      "Confronta conduttori e isolanti",
+      "Verifica attrazione e repulsione"
+    ]
+  },
+  {
+    "slug": "onde-in-corda",
+    "number": "05",
+    "title": "Onde in una corda",
+    "shortDescription": "Trova la frequenza giusta e fai comparire ventri e nodi su una corda tesa.",
+    "description": "Un vibratore mette in oscillazione una corda tesa. Cambiando frequenza e tensione costruirai onde stazionarie e misurerai la lunghezza d’onda senza bisogno di formule complicate.",
+    "question": "Come può un’onda muoversi restando ferma nello stesso punto?",
+    "image": "/images/esperimento-onde.webp",
+    "imageAlt": "Una corda blu forma i ventri di un’onda stazionaria su un banco di laboratorio",
+    "category": "Luce e suono",
+    "duration": "20 min",
+    "age": "12–17 anni",
+    "station": "C1",
+    "room": "Aula Onde · Piano 1",
+    "meetingPoint": "Accoglienza, sotto il cartello verde C1",
+    "directions": "Segui la linea verde fino al primo piano e prosegui a destra. C1 è nell’Aula Onde, accanto alla lavagna.",
+    "guide": "Anna De Santis",
+    "guideRole": "Tutor · 4ªA",
+    "guideInitials": "AD",
+    "accent": "verde",
+    "materials": [
+      "Vibratore meccanico",
+      "Corda elastica",
+      "Carrucola e masse",
+      "Metro a nastro"
+    ],
+    "steps": [
+      "Metti in tensione la corda",
+      "Cerca il primo modo di vibrazione",
+      "Misura la distanza tra due nodi"
+    ]
+  },
+  {
+    "slug": "motore-impossibile",
+    "number": "06",
+    "title": "Il motore impossibile",
+    "shortDescription": "Una pila, un magnete e un filo di rame: costruisci un motore con tre soli elementi.",
+    "description": "Il motore omopolare è un piccolo concentrato di elettromagnetismo. Monterrai il circuito, osserverai la rotazione e proverai a invertirla cambiando il verso della corrente o del campo magnetico.",
+    "question": "Da dove arriva la forza che mette in rotazione un semplice filo?",
+    "image": "/images/esperimento-motore.webp",
+    "imageAlt": "Un filo di rame forma un piccolo motore omopolare sopra una pila e un magnete",
+    "category": "Elettricità",
+    "duration": "25 min",
+    "age": "13–18 anni",
+    "station": "C2",
+    "room": "Aula Onde · Piano 1",
+    "meetingPoint": "Accoglienza, sotto il cartello verde C2",
+    "directions": "Segui la linea verde fino al primo piano e prosegui a destra. C2 è il secondo banco nell’Aula Onde.",
+    "guide": "Tommaso Vitali",
+    "guideRole": "Tutor · 5ªC",
+    "guideInitials": "TV",
+    "accent": "verde",
+    "materials": [
+      "Pila AA",
+      "Magnete al neodimio",
+      "Filo di rame",
+      "Occhiali protettivi"
+    ],
+    "steps": [
+      "Costruisci il supporto di rame",
+      "Chiudi il circuito e osserva il moto",
+      "Inverti il campo e confronta la rotazione"
+    ]
+  }
+]
