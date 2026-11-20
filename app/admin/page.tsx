@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowLeft, KeyRound, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, KeyRound, ShieldCheck, UsersRound } from 'lucide-react'
 import { Brand } from '@/components/brand'
 import { LogoutButton } from '@/components/auth/logout-button'
 import { TutorAccountsManager } from '@/components/admin/tutor-accounts-manager'
@@ -29,7 +29,15 @@ export default async function AdminPage() {
       <header className="border-b bg-background/80 backdrop-blur">
         <div className="section-shell flex h-[72px] items-center justify-between gap-4">
           <Brand />
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            <Button nativeButton={false} render={<Link href="/admin" />} variant="outline" className="h-10 rounded-lg font-bold border-foreground bg-foreground/5">
+              <KeyRound aria-hidden="true" />
+              Accessi tutor
+            </Button>
+            <Button nativeButton={false} render={<Link href="/admin/gruppi" />} variant="ghost" className="h-10 rounded-lg">
+              <UsersRound aria-hidden="true" />
+              Gestione gruppi
+            </Button>
             <Button nativeButton={false} render={<Link href="/staff" />} variant="ghost" className="h-10 rounded-lg">
               <ArrowLeft aria-hidden="true" />
               Regia

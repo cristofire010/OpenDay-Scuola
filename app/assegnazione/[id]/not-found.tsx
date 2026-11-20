@@ -1,9 +1,17 @@
+'use client'
+
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowRight, SearchX } from 'lucide-react'
 import { Brand } from '@/components/brand'
 import { Button } from '@/components/ui/button'
 
 export default function AssignmentNotFound() {
+  useEffect(() => {
+    const timeout = window.setTimeout(() => window.location.replace('/'), 5000)
+    return () => window.clearTimeout(timeout)
+  }, [])
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
@@ -15,9 +23,9 @@ export default function AssignmentNotFound() {
             <SearchX className="size-7" aria-hidden="true" />
           </span>
           <h1 className="display mt-6 text-3xl">Non troviamo questo biglietto.</h1>
-          <p className="mt-4 text-lg leading-relaxed text-muted-foreground">Il link potrebbe essere incompleto. Puoi iscriverti di nuovo oppure chiedere aiuto all’accoglienza.</p>
-          <Button nativeButton={false} render={<Link href="/join" />} size="lg" className="mt-7 h-11 rounded-md px-5">
-            Nuova iscrizione
+          <p className="mt-4 text-lg leading-relaxed text-muted-foreground">Il biglietto non è più disponibile. Tra pochi secondi verrai reindirizzato alla home.</p>
+          <Button nativeButton={false} render={<Link href="/" />} size="lg" className="mt-7 h-11 rounded-md px-5">
+            Torna alla home
             <ArrowRight data-icon="inline-end" aria-hidden="true" />
           </Button>
         </div>

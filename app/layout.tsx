@@ -24,12 +24,12 @@ const atkinson = Atkinson_Hyperlegible({
 
 export const metadata: Metadata = {
   title: {
-    default: 'OpenVolta — Open Day di Fisica',
+    default: 'OpenVolta — Open Day della Scuola',
     template: '%s · OpenVolta',
   },
-  description: 'Scegli un percorso sulla mappa, trova un tutor libero e scopri i laboratori di fisica dell’open day.',
+  description: 'Scegli un percorso sulla mappa, trova un tutor libero e scopri i laboratori e le attività dell’open day della scuola.',
   applicationName: 'OpenVolta',
-  keywords: ['open day', 'fisica', 'laboratorio', 'scuola', 'esperimenti'],
+  keywords: ['open day', 'scuola', 'laboratorio', 'orientamento', 'esperimenti'],
   icons: {
     icon: [
       { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },

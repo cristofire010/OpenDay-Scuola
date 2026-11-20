@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { guardApi } from '@/lib/auth'
 import { TutorAccountError, deleteTutorAccount, updateTutorAccount } from '@/lib/tutor-accounts'
+import { promoteNextFromQueue } from '@/lib/assignments'
 
 export const runtime = 'nodejs'
 
@@ -16,12 +17,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Richiesta non valida.' }, { status: 400 })
   }
 
+  const activeBefore = typeof body.active === 'boolean' ? body.active : undefined
+
   try {
     const account = await updateTutorAccount(id, {
       active: typeof body.active === 'boolean' ? body.active : undefined,
       displayName: typeof body.displayName === 'string' ? body.displayName : undefined,
       password: typeof body.password === 'string' ? body.password : undefined,
     })
+    // Un tutor riattivato può servire il primo gruppo in coda.
+    if (activeBefore === false && account.active === true) {
+      await promoteNextFromQueue().catch((error) => {
+        console.error('promoteNextFromQueue fallita dopo la riattivazione di un tutor', error)
+      })
+    }
     return NextResponse.json({ account })
   } catch (error) {
     if (error instanceof TutorAccountError) {

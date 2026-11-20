@@ -50,6 +50,7 @@ export default async function StaffPage() {
           <Brand />
           <div className="flex items-center gap-1">
             <Link href="/archivio" className="rounded-lg px-3 py-2 text-base font-bold hover:bg-muted">Archivio</Link>
+            <Link href="/admin/gruppi" className="rounded-lg px-3 py-2 text-base font-bold hover:bg-muted">Gestione gruppi</Link>
             <Link href="/admin" className="rounded-lg px-3 py-2 text-base font-bold hover:bg-muted">Accessi tutor</Link>
             <Link href="/tutor" className="rounded-lg px-3 py-2 text-base font-bold hover:bg-muted">Vista tutor</Link>
             <LogoutButton redirectTo="/admin/accesso" />

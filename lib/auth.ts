@@ -20,12 +20,18 @@ export const SESSION_COOKIE = 'md_session'
 const SESSION_SECONDS = 60 * 60 * 12
 const MAX_TOKEN_FIELD = 160
 
-function secret() {
-  return process.env.SESSION_SECRET || `${process.env.STAFF_PASSWORD ?? ''}|openday|session`
+function loadSessionSecret() {
+  const value = process.env.SESSION_SECRET
+  if (!value?.trim() || Buffer.byteLength(value, 'utf8') < 32) {
+    throw new Error('SESSION_SECRET must be configured with at least 32 bytes of random data.')
+  }
+  return value
 }
 
+const SESSION_SECRET = loadSessionSecret()
+
 function sign(value: string) {
-  return createHmac('sha256', secret()).update(value).digest('base64url')
+  return createHmac('sha256', SESSION_SECRET).update(value).digest('base64url')
 }
 
 function safeEqual(a: string, b: string) {

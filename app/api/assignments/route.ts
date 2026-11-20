@@ -2,12 +2,12 @@ import { randomUUID } from 'node:crypto'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { AssignmentError, createAssignment } from '@/lib/assignments'
+import { DEVICE_COOKIE_NAME } from '@/lib/device'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/request'
 
 export const runtime = 'nodejs'
 
-const DEVICE_COOKIE = 'md_device'
 const NAME_PATTERN = /^[\p{L}\p{M}]+(?:[ .'’\-][\p{L}\p{M}]+)*$/u
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -75,12 +75,12 @@ export async function POST(request: Request) {
   }
 
   const jar = await cookies()
-  const deviceId = jar.get(DEVICE_COOKIE)?.value ?? randomUUID()
+  const deviceId = jar.get(DEVICE_COOKIE_NAME)?.value ?? randomUUID()
 
   try {
     const assignment = await createAssignment(displayName, selectedStationSlugs, groupSize, deviceId)
     const response = NextResponse.json({ id: assignment.id }, { status: assignment.existing ? 200 : 201 })
-    response.cookies.set(DEVICE_COOKIE, deviceId, {
+    response.cookies.set(DEVICE_COOKIE_NAME, deviceId, {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',

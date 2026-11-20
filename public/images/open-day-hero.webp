@@ -25,5 +25,5 @@
     <path d="M800 600 L800 550" />
   </g>
   <text x="800" y="340" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="72" font-weight="800" letter-spacing="-0.02em" fill="#141c3a">OpenVolta</text>
-  <text x="800" y="410" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="34" font-weight="600" fill="#141c3a" opacity="0.75">Open Day di Fisica</text>
+  <text x="800" y="410" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="34" font-weight="600" fill="#141c3a" opacity="0.75">Open Day della Scuola</text>
 </svg>

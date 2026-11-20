@@ -1,6 +1,6 @@
-# OpenVolta — Open Day di Fisica
+# OpenVolta — Open Day della Scuola
 
-Sito per l'open day del laboratorio di fisica. I ragazzi inquadrano un QR, inseriscono il nome e la dimensione del gruppo, scelgono una o più tappe sulla mappa (oppure si fanno sorprendere) e ricevono un biglietto con tutor e indicazioni. I tutor vedono i gruppi assegnati e tutte le tappe del loro giro.
+Sito per l'open day della scuola. I ragazzi inquadrano un QR, inseriscono il nome e la dimensione del gruppo, scelgono una o più tappe sulla mappa (oppure si fanno sorprendere) e ricevono un biglietto con tutor e indicazioni. I tutor vedono i gruppi assegnati e tutte le tappe del loro giro.
 
 ## Come funziona
 
@@ -20,7 +20,7 @@ Sito per l'open day del laboratorio di fisica. I ragazzi inquadrano un QR, inser
 
 1. Servono Node 22+ e un database Postgres.
 2. `pnpm install`
-3. Per Neon, esegui `neon deploy` per scrivere le connessioni in `.env.local`. Configura anche `STAFF_PASSWORD` e `SESSION_SECRET`.
+3. Per Neon, esegui `neon deploy` per scrivere le connessioni in `.env.local`. Configura anche `STAFF_PASSWORD` e `SESSION_SECRET`, generato casualmente con almeno 32 byte (ad esempio `openssl rand -hex 32`). L'app non si avvia se `SESSION_SECRET` manca o è troppo corto.
 4. `pnpm db:setup` crea le tabelle e carica le sei postazioni; usa `DATABASE_URL_UNPOOLED` per le migrazioni quando disponibile. Si può rilanciare quando cambi `lib/experiments.json`: aggiorna testi e tutor senza toccare iscritti e capienze.
 5. Apri l’area riservata digitando `admin` e crea gli account dei tutor da `/admin` (vedi sotto).
 6. `pnpm dev`

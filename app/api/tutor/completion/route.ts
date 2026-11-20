@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { getParticipantTutorName, setCompleted } from '@/lib/assignments'
+import { getParticipantTutorName, setCompleted, promoteNextFromQueue } from '@/lib/assignments'
 import { getTutorAccount } from '@/lib/tutor-accounts'
 
 export const runtime = 'nodejs'
@@ -34,6 +34,13 @@ export async function POST(request: Request) {
 
   const updated = await setCompleted(body.id, body.completed)
   if (!updated) return NextResponse.json({ error: 'Gruppo non trovato.' }, { status: 404 })
+
+  // Un turno terminato libera un tutor: prova a servire il primo gruppo in coda.
+  // Se fallisce (nessun gruppo in coda, o nessun tutor disponibile per il primo), non
+  // Blocca la chiusura del turno già completato.
+  await promoteNextFromQueue().catch((error) => {
+    console.error('promoteNextFromQueue fallita dopo la chiusura di un turno', error)
+  })
 
   return NextResponse.json({ ok: true })
 }

@@ -5,6 +5,17 @@ export const SCAN_CODE_LENGTH = 8
 /** Senza caratteri che si confondono a occhio (0/O, 1/I). */
 export const SCAN_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 
+/** Genera un codice casuale di 8 caratteri usando Web Crypto. */
+export function generateScanCode(): string {
+  const bytes = new Uint8Array(SCAN_CODE_LENGTH)
+  globalThis.crypto.getRandomValues(bytes)
+  let code = ''
+  for (let index = 0; index < SCAN_CODE_LENGTH; index += 1) {
+    code += SCAN_ALPHABET[bytes[index] % SCAN_ALPHABET.length]
+  }
+  return code
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 /** `K7M2P9QX` → `K7M2-P9QX`, come si legge sul biglietto. */

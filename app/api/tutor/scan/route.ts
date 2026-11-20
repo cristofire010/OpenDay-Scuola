@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { getAssignment, getAssignmentByScanCode } from '@/lib/assignments'
+import { getAssignment, getAssignmentByScanCode, setArrived } from '@/lib/assignments'
 import { parseScanInput } from '@/lib/scan-codes'
 import { getTutorAccount } from '@/lib/tutor-accounts'
 
@@ -48,9 +48,14 @@ export async function POST(request: Request) {
   // I biglietti dei turni terminati non si scansionano più: sono in archivio.
   if (assignment.participant.completedAt) {
     return NextResponse.json(
-      { error: 'Questo turno è già terminato: il gruppo è nell’archivio della regia.', code: 'ARCHIVED' },
+      { error: 'Questo turno è già terminato.', code: 'ARCHIVED' },
       { status: 409 },
     )
+  }
+
+  if (assignment.participant.status !== 'arrived') {
+    const updated = await setArrived(assignment.participant.id, true)
+    if (!updated) return NextResponse.json({ error: 'Partecipante non trovato.' }, { status: 404 })
   }
 
   return NextResponse.json(
@@ -59,7 +64,7 @@ export async function POST(request: Request) {
       code: assignment.participant.scanCode,
       name: assignment.participant.displayName,
       groupSize: assignment.participant.groupSize,
-      status: assignment.participant.status,
+      status: 'arrived',
       // A questo punto il turno è per forza aperto (i terminati sono in archivio).
       completedAt: null,
       tutorName: assignment.participant.assignedTutorName,

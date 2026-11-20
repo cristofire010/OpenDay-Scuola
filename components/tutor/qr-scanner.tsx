@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Camera, CameraOff, Keyboard, LoaderCircle, ScanLine, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { formatScanCode } from '@/lib/scan-codes'
 
 type JsQrResult = { data: string } | null
 type JsQrFn = (data: Uint8ClampedArray, width: number, height: number) => JsQrResult
@@ -43,9 +44,8 @@ export function QrScanner({ onDetected, onClose }: { onDetected: (value: string)
   const streamRef = useRef<MediaStream | null>(null)
   const timerRef = useRef<number | null>(null)
   const foundRef = useRef(false)
-  const [mode, setMode] = useState<'idle' | 'starting' | 'live' | 'photo'>('idle')
+  const [mode, setMode] = useState<'idle' | 'starting' | 'live' | 'unavailable'>('idle')
   const [cameraError, setCameraError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [manual, setManual] = useState('')
 
@@ -76,8 +76,8 @@ export function QrScanner({ onDetected, onClose }: { onDetected: (value: string)
     setError(null)
 
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-      setMode('photo')
-      setCameraError('Il browser concede la fotocamera solo in HTTPS. Usa la foto del QR qui sotto.')
+      setMode('unavailable')
+      setCameraError('Fotocamera non disponibile. Inserisci il codice manualmente qui sotto.')
       return
     }
 
@@ -133,62 +133,16 @@ export function QrScanner({ onDetected, onClose }: { onDetected: (value: string)
       }, 300)
     } catch (caught) {
       const name = caught instanceof DOMException ? caught.name : ''
-      setMode('photo')
+      setMode('unavailable')
       setCameraError(
         name === 'NotAllowedError'
-          ? 'Permesso fotocamera negato. Attivalo dalle impostazioni del browser (icona lucchetto) e riprova.'
+          ? 'Accesso alla fotocamera negato. Inserisci il codice manualmente qui sotto.'
           : name === 'NotFoundError' || name === 'OverconstrainedError'
-            ? 'Nessuna fotocamera disponibile su questo dispositivo.'
-            : 'Non riesco ad aprire la fotocamera. Usa la foto del QR qui sotto.',
+            ? 'Nessuna fotocamera disponibile. Inserisci il codice manualmente qui sotto.'
+            : 'Non riesco ad aprire la fotocamera. Inserisci il codice manualmente qui sotto.',
       )
     }
   }, [finish])
-
-  async function decodePhoto(file: File) {
-    setBusy(true)
-    setError(null)
-    try {
-      const decode = await loadDecoder()
-      const bitmap = await createImageBitmap(file)
-      const scale = Math.min(1, 1400 / Math.max(bitmap.width, bitmap.height))
-      const width = Math.max(1, Math.round(bitmap.width * scale))
-      const height = Math.max(1, Math.round(bitmap.height * scale))
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const context = canvas.getContext('2d', { willReadFrequently: true })
-      if (!context) throw new Error('canvas non disponibile')
-      context.drawImage(bitmap, 0, 0, width, height)
-      bitmap.close()
-      const pixels = context.getImageData(0, 0, width, height)
-      const result = decode(pixels.data, pixels.width, pixels.height)
-      if (result?.data) finish(result.data)
-      else setError('QR non riconosciuto: inquadralo più da vicino e riprova.')
-    } catch {
-      setError('Non riesco a leggere la foto. Riprova o scrivi il codice.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const photoInput = (
-    <label className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-background/30 px-4 text-base font-bold">
-      {busy ? <LoaderCircle className="size-5 animate-spin" aria-hidden="true" /> : <Camera className="size-5" aria-hidden="true" />}
-      {busy ? 'Leggo il codice…' : 'Scatta una foto del QR'}
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="sr-only"
-        disabled={busy}
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          event.target.value = ''
-          if (file) void decodePhoto(file)
-        }}
-      />
-    </label>
-  )
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-foreground text-background" role="dialog" aria-modal="true" aria-label="Scansiona il QR del biglietto">
@@ -232,7 +186,7 @@ export function QrScanner({ onDetected, onClose }: { onDetected: (value: string)
                   <LoaderCircle className="size-8 animate-spin text-giallo" aria-hidden="true" />
                   <p className="text-base font-bold">Apro la fotocamera…</p>
                 </>
-              ) : mode === 'photo' ? (
+              ) : mode === 'unavailable' ? (
                 <>
                   <span className="flex size-14 items-center justify-center rounded-full bg-giallo text-giallo-foreground">
                     <CameraOff className="size-6" aria-hidden="true" />
@@ -264,8 +218,6 @@ export function QrScanner({ onDetected, onClose }: { onDetected: (value: string)
           )}
         </div>
 
-        {mode !== 'live' && photoInput}
-
         {error && (
           <p role="alert" className="w-full max-w-md rounded-lg bg-destructive/20 px-4 py-3 text-base">
             {error}
@@ -290,7 +242,11 @@ export function QrScanner({ onDetected, onClose }: { onDetected: (value: string)
             <Input
               id="scan-code"
               value={manual}
-              onChange={(event) => setManual(event.target.value)}
+              onChange={(event) => {
+                const value = event.target.value
+                const code = value.toUpperCase().replace(/[^0-9A-Z]/g, '')
+                setManual(code.length > 8 ? value : code.length > 4 ? formatScanCode(code) : code)
+              }}
               placeholder="K7M2-P9QX"
               autoComplete="off"
               autoCapitalize="characters"

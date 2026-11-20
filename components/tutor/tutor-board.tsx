@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import useSWR from 'swr'
-import { Bell, BellRing, Check, Flag, LoaderCircle, RotateCcw, ScanLine, UsersRound, X } from 'lucide-react'
+import { Bell, BellRing, Check, Flag, LoaderCircle, ScanLine, UsersRound, X } from 'lucide-react'
 import { QrScanner } from '@/components/tutor/qr-scanner'
 import { Button } from '@/components/ui/button'
-import { formatScanCode } from '@/lib/scan-codes'
 import { getLine } from '@/lib/experiments'
 import type { Roster } from '@/lib/assignments'
 import { cn } from '@/lib/utils'
@@ -13,17 +12,6 @@ import { cn } from '@/lib/utils'
 type TutorOption = { name: string; role: string }
 
 type TutorIdentity = { name: string; role: string }
-
-type ScanResult = {
-  id: string
-  code: string
-  name: string
-  groupSize: number
-  status: string
-  completedAt: string | null
-  tutorName: string | null
-  stations: Array<{ slug: string; code: string; title: string; room: string; accent: string }>
-}
 
 const STORAGE_KEY = 'openvolta_tutor'
 const SEEN_KEY = 'openvolta_seen_groups'
@@ -45,13 +33,13 @@ async function fetchRoster(url: string): Promise<Roster> {
 export function TutorBoard({ tutors, identity }: { tutors: TutorOption[]; identity?: TutorIdentity }) {
   const [tutorName, setTutorName] = useState<string>(identity?.name ?? tutors[0]?.name ?? '')
   const [scanOpen, setScanOpen] = useState(false)
-  const [scan, setScan] = useState<ScanResult | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ name: string; stations: string } | null>(null)
   const [permission, setPermission] = useState<'default' | 'granted' | 'denied' | 'unsupported'>('unsupported')
   const seenGroups = useRef<Set<string> | null>(null)
+  const identityName = identity?.name
 
   useEffect(() => {
     if (identity) {
@@ -90,9 +78,9 @@ export function TutorBoard({ tutors, identity }: { tutors: TutorOption[]; identi
 
   // Avvisa il tutor quando nel suo elenco compare un gruppo nuovo.
   useEffect(() => {
-    if (!data) return
+    if (!identityName || !data || data.tutor.name !== identityName) return
 
-    const key = `${SEEN_KEY}:${identity?.name ?? tutorName}`
+    const key = `${SEEN_KEY}:${identityName}`
     const ids = data.groups.map((group) => group.id)
 
     const announce = (groups: Roster['groups']) => {
@@ -104,11 +92,18 @@ export function TutorBoard({ tutors, identity }: { tutors: TutorOption[]; identi
 
       setNotice({ name: label, stations })
 
+      // Su alcuni browser (es. mobile) il costruttore Notification non è utilizzabile:
+      // le notifiche OS vanno mostrate tramite ServiceWorkerRegistration.showNotification.
+      // Qui l'avviso in-app (notice) resta comunque visibile; la notifica OS è un extra.
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        new Notification('Nuovo gruppo assegnato', {
-          body: stations ? `${label} — ${stations}` : label,
-          tag: 'openvolta-nuovo-gruppo',
-        })
+        try {
+          new Notification('Nuovo gruppo assegnato', {
+            body: stations ? `${label} — ${stations}` : label,
+            tag: 'openvolta-nuovo-gruppo',
+          })
+        } catch {
+          // Costruttore non disponibile in questo contesto: ignoro, l'avviso in-app resta.
+        }
       }
     }
 
@@ -138,7 +133,7 @@ export function TutorBoard({ tutors, identity }: { tutors: TutorOption[]; identi
     for (const group of fresh) seenGroups.current.add(group.id)
     rememberSeen(key, [...seenGroups.current])
     announce(fresh)
-  }, [data, identity?.name, tutorName])
+  }, [data, identityName])
 
   async function enableNotifications() {
     if (typeof Notification === 'undefined') return
@@ -156,7 +151,6 @@ export function TutorBoard({ tutors, identity }: { tutors: TutorOption[]; identi
 
   const handleDetected = useCallback(async (value: string) => {
     setScanOpen(false)
-    setScan(null)
     setScanError(null)
     setPending(true)
     try {
@@ -165,41 +159,18 @@ export function TutorBoard({ tutors, identity }: { tutors: TutorOption[]; identi
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ input: value }),
       })
-      const result = await response.json() as ScanResult & { error?: string }
+      const result = await response.json() as { error?: string }
       if (!response.ok) {
         setScanError(result.error ?? 'Non riesco a leggere questo codice.')
         return
       }
-      setScan(result)
-    } catch {
-      setScanError('Controlla la connessione e riprova.')
-    } finally {
-      setPending(false)
-    }
-  }, [])
-
-  async function setArrived(id: string, arrived: boolean) {
-    setPending(true)
-    setScanError(null)
-    try {
-      const response = await fetch('/api/tutor/arrivals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, arrived }),
-      })
-      if (!response.ok) {
-        const result = await response.json() as { error?: string }
-        setScanError(result.error ?? 'Non siamo riusciti a registrare la presenza.')
-        return
-      }
-      setScan((current) => (current ? { ...current, status: arrived ? 'arrived' : 'assigned' } : current))
       await mutate()
     } catch {
       setScanError('Controlla la connessione e riprova.')
     } finally {
       setPending(false)
     }
-  }
+  }, [mutate])
 
   async function setCompleted(id: string, completed: boolean) {
     setPending(true)
@@ -215,11 +186,6 @@ export function TutorBoard({ tutors, identity }: { tutors: TutorOption[]; identi
         setScanError(result.error ?? 'Non siamo riusciti a chiudere il turno.')
         return
       }
-      setScan((current) =>
-        current && current.id === id
-          ? { ...current, completedAt: completed ? new Date().toISOString() : null }
-          : current,
-      )
       await mutate()
     } catch {
       setScanError('Controlla la connessione e riprova.')
@@ -311,113 +277,6 @@ export function TutorBoard({ tutors, identity }: { tutors: TutorOption[]; identi
         <p role="alert" className="mt-4 rounded-lg bg-destructive/10 p-3 text-base text-destructive">
           {scanError}
         </p>
-      )}
-
-      {scan && (
-        <section aria-labelledby="scanned-title" className="mt-6 rounded-xl border-2 border-foreground bg-card p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                Codice {formatScanCode(scan.code)}
-              </p>
-              <h2 id="scanned-title" className="display-sm mt-1 text-2xl">
-                {scan.name}
-                {scan.groupSize > 1 ? ` · ${scan.groupSize} persone` : ' · 1 persona'}
-              </h2>
-            </div>
-            <Button type="button" variant="ghost" onClick={() => setScan(null)} aria-label="Chiudi il gruppo trovato">
-              <X aria-hidden="true" />
-            </Button>
-          </div>
-
-          <ol className="mt-4 flex flex-col gap-2">
-            {scan.stations.map((station, index) => {
-              const line = getLine(station.accent)
-              return (
-                <li key={station.slug} data-line={line.accent} className="flex items-center gap-3 rounded-lg bg-line-soft p-2.5">
-                  <span className="display flex size-9 shrink-0 items-center justify-center rounded-md bg-line text-sm text-line-foreground">
-                    {station.code}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-bold leading-tight">{station.title}</span>
-                    <span className="block text-sm text-muted-foreground">{station.room}</span>
-                  </span>
-                  <span className="text-sm font-bold tabular-nums">{index + 1}</span>
-                </li>
-              )
-            })}
-          </ol>
-
-          {scan.status === 'arrived' ? (
-            <div className="mt-5 flex flex-col gap-3">
-              <p className="flex items-center gap-2 rounded-lg bg-foreground px-4 py-3 text-lg font-bold text-background">
-                <Check className="size-5" aria-hidden="true" />
-                Presenza confermata
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={pending}
-                onClick={() => setArrived(scan.id, false)}
-                className="h-11 rounded-md text-base"
-              >
-                <RotateCcw aria-hidden="true" />
-                Annulla conferma
-              </Button>
-            </div>
-          ) : (
-            <Button
-              type="button"
-              size="lg"
-              disabled={pending}
-              onClick={() => setArrived(scan.id, true)}
-              className="mt-5 h-14 w-full rounded-md text-lg font-bold"
-            >
-              {pending ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <Check aria-hidden="true" />}
-              Conferma arrivo
-            </Button>
-          )}
-
-          <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t pt-4">
-            {scan.completedAt ? (
-              <p className="mr-auto text-sm font-bold">
-                Turno terminato: il gruppo è nell’archivio della regia e il QR non si scansiona più.
-              </p>
-            ) : confirmId === scan.id ? (
-              <>
-                <p className="mr-auto text-sm font-bold">Terminare il turno di {scan.name}?</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={pending}
-                  onClick={() => setConfirmId(null)}
-                  className="h-10 rounded-md text-sm"
-                >
-                  Annulla
-                </Button>
-                <Button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => setCompleted(scan.id, true)}
-                  className="h-10 rounded-md text-sm"
-                >
-                  {pending ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <Flag aria-hidden="true" />}
-                  Sì, termina
-                </Button>
-              </>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setConfirmId(scan.id)}
-                className="h-10 rounded-md text-sm"
-              >
-                <Flag aria-hidden="true" />
-                Termina turno
-              </Button>
-            )}
-          </div>
-        </section>
       )}
 
       {error && <p role="alert" className="mt-5 rounded-lg bg-destructive/10 p-3 text-base text-destructive">L’ultimo aggiornamento non è riuscito. L’elenco resta quello precedente.</p>}
@@ -537,22 +396,24 @@ export function TutorBoard({ tutors, identity }: { tutors: TutorOption[]; identi
         <div
           role="status"
           aria-live="polite"
-          className="fixed inset-x-3 bottom-4 z-50 mx-auto max-w-md rounded-xl bg-foreground p-4 text-background shadow-lg"
+          className="notice-enter fixed inset-x-3 bottom-4 z-50 mx-auto max-w-xl rounded-2xl border-4 border-giallo bg-foreground p-5 text-background shadow-[0_12px_40px_rgba(0,0,0,0.5)] ring-4 ring-foreground/30 sm:p-6"
         >
-          <div className="flex items-start gap-3">
-            <BellRing className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+          <div className="flex items-start gap-4">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-giallo text-giallo-foreground">
+              <BellRing className="notice-bell size-6" aria-hidden="true" />
+            </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold uppercase tracking-[0.14em]">Nuovo gruppo</p>
-              <p className="mt-1 text-lg font-bold leading-tight">{notice.name}</p>
-              {notice.stations && <p className="mt-1 text-sm">Tappe: {notice.stations}</p>}
+              <p className="text-base font-bold uppercase tracking-[0.14em] text-giallo">Nuovo gruppo assegnato</p>
+              <p className="mt-1 text-2xl font-bold leading-tight">{notice.name}</p>
+              {notice.stations && <p className="mt-2 text-base font-semibold">Tappe: {notice.stations}</p>}
             </div>
             <button
               type="button"
               onClick={() => setNotice(null)}
               aria-label="Chiudi la notifica"
-              className="rounded-md p-1 hover:bg-background/10"
+              className="rounded-md p-2 hover:bg-background/10"
             >
-              <X className="size-4" aria-hidden="true" />
+              <X className="size-5" aria-hidden="true" />
             </button>
           </div>
         </div>

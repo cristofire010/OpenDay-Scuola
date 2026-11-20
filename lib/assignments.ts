@@ -7,6 +7,7 @@ import type { StaffOverview, StationAvailability } from '@/lib/open-day-types'
 import { SCAN_ALPHABET, SCAN_CODE_LENGTH } from '@/lib/scan-codes'
 import { pickTutor } from '@/lib/tutor-matching'
 import type { TutorLoad } from '@/lib/tutor-matching'
+import { getStationOccupancy } from '@/lib/get-station-occupancy'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -38,14 +39,9 @@ export class AssignmentError extends Error {
   }
 }
 
-function buildOverview(stationRows: StationRow[], countRows: CountRow[]): StaffOverview {
+function buildOverview(stationRows: StationRow[], stationOccupancy: Record<string, number>): StationAvailability[] {
   const stations: StationAvailability[] = stationRows.map((station) => {
-    const stationCounts = countRows.filter((row) => row.slug === station.slug)
-    const total = stationCounts.reduce((sum, row) => sum + row.value, 0)
-    const arrived = stationCounts
-      .filter((row) => row.status === 'arrived')
-      .reduce((sum, row) => sum + row.value, 0)
-
+    const occupancy = stationOccupancy[station.slug] ?? 0
     return {
       slug: station.slug,
       code: station.stationCode,
@@ -57,60 +53,65 @@ function buildOverview(stationRows: StationRow[], countRows: CountRow[]): StaffO
       directions: station.directions,
       accent: station.accent as ExperimentAccent,
       capacity: station.capacity,
-      total,
-      arrived,
-      remaining: Math.max(0, station.capacity - total),
+      total: station.capacity,
+      arrived: 0,
+      remaining: Math.max(0, station.capacity - occupancy),
     }
   })
 
-  return {
-    stations,
-    total: stations.reduce((sum, station) => sum + station.total, 0),
-    arrived: stations.reduce((sum, station) => sum + station.arrived, 0),
-    activeStations: stations.length,
-  }
-}
-
-async function getCountRows(stationSlugs: string[]) {
-  if (stationSlugs.length === 0) return []
-
-  return db
-    .select({
-      slug: openDayParticipantStations.stationSlug,
-      status: openDayParticipants.status,
-      value: sql<number>`sum(${openDayParticipants.groupSize})::integer`,
-    })
-    .from(openDayParticipantStations)
-    .innerJoin(openDayParticipants, eq(openDayParticipantStations.participantId, openDayParticipants.id))
-    .where(and(
-      inArray(openDayParticipantStations.stationSlug, stationSlugs),
-      // I gruppi con il turno terminato non occupano più posti.
-      isNull(openDayParticipants.completedAt),
-    ))
-    .groupBy(openDayParticipantStations.stationSlug, openDayParticipants.status)
+  return stations
 }
 
 export async function getStaffOverview(): Promise<StaffOverview> {
-  const [stationRows, participants] = await Promise.all([
-    db.select().from(openDayStations).where(eq(openDayStations.active, true)).orderBy(asc(openDayStations.sortOrder)),
-    db
-      .select({
-        status: openDayParticipants.status,
-        value: sql<number>`sum(${openDayParticipants.groupSize})::integer`,
-      })
-      .from(openDayParticipants)
-      .where(isNull(openDayParticipants.completedAt))
-      .groupBy(openDayParticipants.status),
-  ])
-  const countRows = await getCountRows(stationRows.map((station) => station.slug))
-  const total = participants.reduce((sum, participant) => sum + participant.value, 0)
-  const arrived = participants.find((participant) => participant.status === 'arrived')?.value ?? 0
-  const overview = buildOverview(stationRows, countRows)
+  const stationRows = await db
+    .select().from(openDayStations).where(eq(openDayStations.active, true)).orderBy(asc(openDayStations.sortOrder))
 
-  return { ...overview, total, arrived }
+  const stationOccupancy = await getStationOccupancy(stationRows.map((s) => s.slug))
+
+  const stations = buildOverview(stationRows, stationOccupancy)
+
+  const total = stations.reduce((sum, station) => sum + station.total, 0)
+  const activeStations = stations.length
+
+  return {
+    stations,
+    total,
+    arrived: 0,
+    activeStations,
+  }
 }
-
 type Queryable = Pick<typeof db, 'select'>
+
+/** Numero di gruppi in coda (status = 'queued') che sono posizionati prima di questo,
+ *  oppure 0 se il partecipante non è in coda. Usato solo per mostrare la posizione
+ *  al partecipante: non è una colonna, perché la posizione reale cambia non appena un
+ *  gruppo anteriore viene promosso, e una query di sola lettura restituisce sempre il
+ *  valore aggiornato senza blocco.
+ */
+export async function queuePositionOf(id: string): Promise<number | null> {
+  if (!UUID_PATTERN.test(id)) return null
+
+  const my = await db
+    .select({ createdAt: openDayParticipants.createdAt, id: openDayParticipants.id })
+    .from(openDayParticipants)
+    .where(eq(openDayParticipants.id, id))
+    .limit(1)
+
+  const row = my[0]
+  if (!row) return null
+
+  const [count] = await db
+    .select({ position: sql<number>`count(*)::integer` })
+    .from(openDayParticipants)
+    .where(
+      and(
+        eq(openDayParticipants.status, 'queued'),
+        sql`(${openDayParticipants.createdAt}, ${openDayParticipants.id}) <= (${row.createdAt}::timestamptz, ${row.id}::uuid)`,
+      ),
+    )
+
+  return count?.position ?? null
+}
 
 /** Carico attuale dei tutor: gruppi già assegnati e tappe di ciascun gruppo. */
 async function getTutorLoads(database: Queryable) {
@@ -131,7 +132,6 @@ async function getTutorLoads(database: Queryable) {
     .from(openDayParticipants)
     .where(and(
       inArray(openDayParticipants.assignedTutorName, tutors.map((tutor) => tutor.name)),
-      // Un turno chiuso libera il tutor per un altro gruppo.
       isNull(openDayParticipants.completedAt),
     ))
 
@@ -175,7 +175,10 @@ export async function createAssignment(
         displayName: openDayParticipants.displayName,
       })
       .from(openDayParticipants)
-      .where(eq(openDayParticipants.deviceId, deviceId))
+      .where(and(
+        eq(openDayParticipants.deviceId, deviceId),
+        isNull(openDayParticipants.completedAt),
+      ))
 
     const duplicate = sameDevice.find(
       (row) => row.displayName.toLocaleLowerCase('it') === displayName.toLocaleLowerCase('it'),
@@ -202,23 +205,15 @@ export async function createAssignment(
       throw new AssignmentError('NOT_FOUND', 'La postazione scelta non è disponibile.')
     }
 
-    // Persone già attese in ogni laboratorio (senza turni, il conteggio è unico).
-    const stationAssignments = await tx
-      .select({
-        slug: openDayParticipantStations.stationSlug,
-        occupancy: sql<number>`sum(${openDayParticipants.groupSize})::integer`,
-      })
-      .from(openDayParticipantStations)
-      .innerJoin(openDayParticipants, eq(openDayParticipantStations.participantId, openDayParticipants.id))
-      .where(isNull(openDayParticipants.completedAt))
-      .groupBy(openDayParticipantStations.stationSlug)
+    // Usa la funzione unificata per l'occupanza
+    const stationOccupancy = await getStationOccupancy(
+      requestedStationSlugs ?? undefined,
+    )
 
-    const occupancyOf = (slug: string) =>
-      stationAssignments.find((assignment) => assignment.slug === slug)?.occupancy ?? 0
-
-    // I tutor sono le persone con un account attivo, non i nomi delle postazioni.
+    // Carico attuale dei tutor
     const loads = await getTutorLoads(tx)
 
+    // Persone già attese in ogni laboratorio (senza turni, il conteggio è unico).
     const routeOptions: string[][] = requestedStationSlugs
       ? [requestedStationSlugs]
       : stationRows
@@ -226,16 +221,19 @@ export async function createAssignment(
           .sort(() => Math.random() - 0.5)
 
     let candidate: { slugs: string[]; tutorName: string } | undefined
+    let fittingSlugs: string[] | undefined
     let anyRouteAvailable = false
 
     for (const slugs of routeOptions) {
       const fits = slugs.every((slug) => {
         const station = stationRows.find((row) => row.slug === slug)
-        return station ? occupancyOf(slug) + groupSize <= station.capacity : false
+        return station ? stationOccupancy[slug] + groupSize <= station.capacity : false
       })
       if (!fits) continue
 
       anyRouteAvailable = true
+      if (!fittingSlugs) fittingSlugs = slugs
+
       const tutorName = pickTutor(loads, slugs, groupSize)
       if (tutorName) {
         candidate = { slugs, tutorName }
@@ -243,43 +241,147 @@ export async function createAssignment(
       }
     }
 
-    if (!candidate) {
-      if (requestedStationSlugs && anyRouteAvailable) {
-        throw new AssignmentError(
-          'ALL_FULL',
-          'Ogni tutor ha già due gruppi. Chiedi all’accoglienza di aggiungerne uno.',
-        )
-      }
-      if (requestedStationSlugs) {
-        throw new AssignmentError(
-          'FULL',
-          'Questo giro è al completo. Scegli meno tappe oppure fatti sorprendere.',
-        )
-      }
-      throw new AssignmentError('ALL_FULL', 'Tutti i laboratori sono al completo. Rivolgiti all’accoglienza.')
+    if (candidate) {
+      const inserted = await tx
+        .insert(openDayParticipants)
+        .values({
+          displayName,
+          scanCode: createScanCode(),
+          requestedStationSlug: requestedStationSlugs?.[0] ?? null,
+          assignedStationSlug: candidate.slugs[0],
+          assignedTutorName: candidate.tutorName,
+          groupSize,
+          deviceId,
+        })
+        .returning({ id: openDayParticipants.id })
+      await tx.insert(openDayParticipantStations).values(
+        candidate.slugs.map((slug, sortOrder) => ({
+          participantId: inserted[0].id,
+          stationSlug: slug,
+          sortOrder,
+        })),
+      )
+
+      return { id: inserted[0].id, existing: false }
     }
 
-    const inserted = await tx
-      .insert(openDayParticipants)
-      .values({
-        displayName,
-        scanCode: createScanCode(),
-        requestedStationSlug: requestedStationSlugs?.[0] ?? null,
-        assignedStationSlug: candidate.slugs[0],
-        assignedTutorName: candidate.tutorName,
-        groupSize,
-      })
-      .returning({ id: openDayParticipants.id })
-    await tx.insert(openDayParticipantStations).values(
-      candidate.slugs.map((slug, sortOrder) => ({
-        participantId: inserted[0].id,
-        stationSlug: slug,
-        sortOrder,
-      })),
-    )
+    // La scelta dei laboratori entra in capienza, ma non c'è un tutor libero:
+    // si mette in coda invece di rifiutare l'iscrizione.
+    if (fittingSlugs) {
+      const inserted = await tx
+        .insert(openDayParticipants)
+        .values({
+          displayName,
+          scanCode: createScanCode(),
+          requestedStationSlug: requestedStationSlugs?.[0] ?? null,
+          assignedStationSlug: fittingSlugs[0],
+          assignedTutorName: null,
+          groupSize,
+          status: 'queued',
+          deviceId,
+        })
+        .returning({ id: openDayParticipants.id, createdAt: openDayParticipants.createdAt })
 
-    return { id: inserted[0].id, existing: false }
+      const participantId = inserted[0].id
+      await tx.insert(openDayParticipantStations).values(
+        fittingSlugs.map((slug, sortOrder) => ({
+          participantId,
+          stationSlug: slug,
+          sortOrder,
+        })),
+      )
+
+      return { id: participantId, existing: false, queued: true }
+    }
+
+    if (requestedStationSlugs) {
+      throw new AssignmentError(
+        'FULL',
+        'Questo giro è al completo. Scegli meno tappe oppure fatti sorprendere.',
+      )
+    }
+    throw new AssignmentError(
+      'ALL_FULL',
+      'Tutti i laboratori sono al completo. Rivolgiti all’accoglienza.',
+    )
   })
+}
+
+/** Quando un tutor diventa libero (turno terminato o account riattivato), sposta in
+ * assegnazione il primo gruppo in coda che può essere servito.
+ * La coda è ordinata per data di accodamento (crea + id). Il primo gruppo viene
+ * promosso solo se esiste un tutor che può prendere il suo giro: in tal caso il gruppo
+ * esce dalla coda con status = 'assigned' e il nome del tutor. Se nessun tutor può
+ * prendere il primo gruppo in coda, non si tocca nessuno: la coda resta fedele alla
+ * posizione e il partecipante viene servito non appena un tutor con capacity sufficente
+ * termina il turno. I gruppi in coda occupano già i posti (sono stati contati al
+ * momento dell'accodamento), quindi la capacità non va ricalcolata.
+ */
+export async function promoteNextFromQueue(): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const first = await tx
+      .select({
+        id: openDayParticipants.id,
+        groupSize: openDayParticipants.groupSize,
+      })
+      .from(openDayParticipants)
+      .where(eq(openDayParticipants.status, 'queued'))
+      .orderBy(asc(openDayParticipants.createdAt), asc(openDayParticipants.id))
+      .limit(1)
+
+    const queued = first[0]
+    if (!queued) return false
+
+    const stationRows = await tx
+      .select()
+      .from(openDayStations)
+      .where(eq(openDayStations.active, true))
+
+    const routeRows = await tx
+      .select({ stationSlug: openDayParticipantStations.stationSlug })
+      .from(openDayParticipantStations)
+      .where(eq(openDayParticipantStations.participantId, queued.id))
+      .orderBy(asc(openDayParticipantStations.sortOrder))
+
+    const slugs = routeRows.map((row) => row.stationSlug)
+    if (slugs.length === 0) return false
+
+    // Non dovrebbe mai accadere (la capienza è stata riservata all'accodamento),
+    // ma se per un errore di dati il primo gruppo in coda occuperebbe posti che non
+    // ha più, lo saltiamo: non si promuove nulla, la coda resta coerente.
+    const occupancyRows = await tx
+      .select({
+        slug: openDayParticipantStations.stationSlug,
+        occupancy: sql<number>`sum(${openDayParticipants.groupSize})::integer`,
+      })
+      .from(openDayParticipantStations)
+      .innerJoin(openDayParticipants, eq(openDayParticipants.id, openDayParticipantStations.participantId))
+      .where(isNull(openDayParticipants.completedAt))
+      .groupBy(openDayParticipantStations.stationSlug)
+
+    const occupancyOf = (slug: string) => occupancyRows.find((row) => row.slug === slug)?.occupancy ?? 0
+    for (const slug of slugs) {
+      const station = stationRows.find((row) => row.slug === slug)
+      if (!station || occupancyOf(slug) > station.capacity) return false
+    }
+
+    const loads = await getTutorLoads(tx)
+    const tutorName = pickTutor(loads, slugs, queued.groupSize)
+    if (!tutorName) return false
+
+    const updated = await tx
+      .update(openDayParticipants)
+      .set({ status: 'assigned', assignedTutorName: tutorName })
+      .where(and(eq(openDayParticipants.id, queued.id), eq(openDayParticipants.status, 'queued')))
+      .returning({ id: openDayParticipants.id })
+
+    return updated.length > 0
+  })
+}
+
+/** Stato completato per il partecipante. Dipende solo da completedAt. */
+export function isCompleted(row: { completedAt: Date | null }): boolean {
+  return row.completedAt !== null
 }
 
 export async function getAssignment(id: string) {
@@ -318,16 +420,39 @@ export async function getAssignmentByScanCode(code: string) {
   return rows[0] ? getAssignment(rows[0].id) : null
 }
 
+export async function getActiveDeviceTicket(deviceId: string) {
+  if (!UUID_PATTERN.test(deviceId)) return null
+
+  const rows = await db
+    .select({
+      id: openDayParticipants.id,
+      displayName: openDayParticipants.displayName,
+    })
+    .from(openDayParticipants)
+    .where(and(
+      eq(openDayParticipants.deviceId, deviceId),
+      isNull(openDayParticipants.completedAt),
+    ))
+    .orderBy(desc(openDayParticipants.createdAt))
+    .limit(1)
+
+  return rows[0] ?? null
+}
+
 export async function getParticipantStatus(id: string) {
   if (!UUID_PATTERN.test(id)) return null
 
   const rows = await db
-    .select({ status: openDayParticipants.status })
+    .select({
+      status: openDayParticipants.status,
+      completedAt: openDayParticipants.completedAt,
+    })
     .from(openDayParticipants)
     .where(eq(openDayParticipants.id, id))
     .limit(1)
 
-  return rows[0]?.status ?? null
+  const row = rows[0]
+  return row ? { status: row.status, completed: row.completedAt !== null } : null
 }
 
 export async function getParticipantTutorName(id: string) {
@@ -340,6 +465,57 @@ export async function getParticipantTutorName(id: string) {
     .limit(1)
 
   return rows[0]?.tutorName ?? null
+}
+
+/** Stato completo di un biglietto, incluso se è in coda e la posizione.
+ * È la funzione usata dall'endpoint `/api/assignments/[id]/status` che il biglietto
+ * pollinga per capire se il tutor è stato assegnato (o se il turno è finito).
+ */
+export interface QueueStatus {
+  queued: boolean
+  position: number
+  tutorName: string | null
+  arrived: boolean
+  completed: boolean
+}
+
+export async function getQueueStatus(id: string): Promise<QueueStatus | null> {
+  if (!UUID_PATTERN.test(id)) return null
+
+  const rows = await db
+    .select({
+      status: openDayParticipants.status,
+      completedAt: openDayParticipants.completedAt,
+      assignedTutorName: openDayParticipants.assignedTutorName,
+    })
+    .from(openDayParticipants)
+    .where(eq(openDayParticipants.id, id))
+    .limit(1)
+
+  const row = rows[0]
+  if (!row) return null
+
+  const completed = row.completedAt !== null
+  const arrived = row.status === 'arrived'
+
+  if (row.status === 'queued') {
+    const position = await queuePositionOf(id)
+    return {
+      queued: true,
+      position: Math.max(1, position ?? 0),
+      tutorName: null,
+      arrived,
+      completed,
+    }
+  }
+
+  return {
+    queued: false,
+    position: 0,
+    tutorName: row.assignedTutorName ?? null,
+    arrived,
+    completed,
+  }
 }
 
 export async function setCompleted(id: string, completed: boolean) {
@@ -414,7 +590,7 @@ export async function getRoster(tutorName: string): Promise<Roster> {
       completedAt: openDayParticipants.completedAt,
     })
     .from(openDayParticipants)
-    // I turni chiusi finiscono nell’archivio della regia: il tutor non li vede più.
+    // I turni chiusi finiscono nell'archivio della regia: il tutor non li vede più.
     .where(and(
       eq(openDayParticipants.assignedTutorName, tutorName),
       isNull(openDayParticipants.completedAt),

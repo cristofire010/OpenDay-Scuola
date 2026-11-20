@@ -53,7 +53,7 @@ export default async function TutorPage() {
         <h1 className="display text-3xl sm:text-4xl">{identity ? `Ciao, ${identity.name.split(' ')[0]}` : 'Il tuo gruppo'}</h1>
         <p className="mt-3 max-w-2xl text-lg leading-relaxed text-muted-foreground">
           {identity
-            ? 'Qui trovi i tuoi gruppi (al massimo due) con i laboratori del giro. L’arrivo si registra solo scansionando il QR del biglietto.'
+            ? 'Qui trovi i tuoi gruppi con i laboratori del giro. L’arrivo si registra solo scansionando il QR del biglietto.'
             : 'Scegli il tutor per vedere i suoi gruppi e i laboratori del giro. Gli arrivi si registrano scansionando il QR del biglietto.'}
         </p>
         <p className="mt-2 inline-flex items-center gap-2 text-base text-muted-foreground">

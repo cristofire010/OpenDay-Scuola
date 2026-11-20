@@ -17,9 +17,15 @@ type Stage = 'welcome' | 'map'
 export function OpenVoltaExperience({
   stations,
   initialExperiment,
+  stationsLoading = false,
+  stationsError = null,
+  existingTicket,
 }: {
   stations: StationAvailability[]
   initialExperiment?: string
+  stationsLoading?: boolean
+  stationsError?: string | null
+  existingTicket?: { id: string; displayName: string }
 }) {
   const router = useRouter()
   const [stage, setStage] = useState<Stage>('welcome')
@@ -103,10 +109,31 @@ export function OpenVoltaExperience({
             </Link>
           </header>
 
-          {stage === 'welcome' ? (
+          {existingTicket ? (
             <main id="main-content" className="flex flex-1 items-center justify-center py-8">
               <section className="w-full max-w-[620px] rounded-3xl border border-white/40 bg-background/95 p-6 shadow-2xl shadow-black/30 backdrop-blur-sm sm:p-10">
-                <p className="mb-4 text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">Open day di fisica · laboratori aperti</p>
+                <p className="mb-4 text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                  Bentornato, {existingTicket.displayName}
+                </p>
+                <h1 className="display text-[clamp(2.5rem,8vw,5.5rem)]">Hai già un biglietto</h1>
+                <p className="mt-4 max-w-lg text-lg leading-relaxed">
+                  Il tuo biglietto è ancora attivo. Puoi riaprire il giro e ritrovare tutte le tappe assegnate.
+                </p>
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={() => router.push(`/assegnazione/${existingTicket.id}`)}
+                  className="mt-8 h-14 w-full rounded-xl text-base font-bold"
+                >
+                  Ritorna al tuo biglietto
+                  <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                </Button>
+              </section>
+            </main>
+          ) : stage === 'welcome' ? (
+            <main id="main-content" className="flex flex-1 items-center justify-center py-8">
+              <section className="w-full max-w-[620px] rounded-3xl border border-white/40 bg-background/95 p-6 shadow-2xl shadow-black/30 backdrop-blur-sm sm:p-10">
+                <p className="mb-4 text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">Open day della scuola · laboratori aperti</p>
                 <h1 className="display text-[clamp(2.5rem,8vw,5.5rem)]">OpenVolta ti aspetta</h1>
                 <p className="mt-4 max-w-lg text-lg leading-relaxed">
                   Scrivi il tuo nome e quante persone siete. Poi scegliete insieme le tappe sulla mappa.
@@ -144,12 +171,19 @@ export function OpenVoltaExperience({
                       className="h-12 rounded-lg border border-input bg-card px-4 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                     >
                       {Array.from({ length: 6 }, (_, index) => index + 1).map((count) => (
-                        <option key={count} value={count}>{count} {count === 1 ? 'persona' : 'persone'}</option>
+                        <option key={count} value={count}>
+                          {count} {count === 1 ? 'persona' : 'persone'}
+                        </option>
                       ))}
                     </select>
                   </div>
 
-                  <Button type="submit" size="lg" className="mt-2 h-14 w-full rounded-xl text-base font-bold">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    disabled={!displayName.trim()}
+                    className="mt-2 h-14 w-full rounded-xl text-base font-bold"
+                  >
                     Entra nella mappa
                     <ArrowRight data-icon="inline-end" aria-hidden="true" />
                   </Button>
@@ -190,13 +224,13 @@ export function OpenVoltaExperience({
                   </p>
 
                   {selectedStations.length === 0 ? (
-                                        <p className="mt-5 rounded-lg bg-secondary p-4 text-base leading-snug">
+                    <p className="mt-5 rounded-lg bg-secondary p-4 text-base leading-snug">
                       Non sai da dove iniziare? Ci pensa OpenVolta a scegliere una tappa libera per voi.
                     </p>
                   ) : (
                     <ol className="mt-5 flex flex-col gap-2">
-                      {selectedStations.map((station, index) => (
-                        <li key={station.slug} data-line={station.accent} className="flex items-center gap-3 rounded-lg bg-line-soft p-3">
+                      { selectedStations.map((station, index) => (
+                        <li key={station.slug} data-line={station.slug} className="flex items-center gap-3 rounded-lg bg-line-soft p-3">
                           <span className="display flex size-10 shrink-0 items-center justify-center rounded-md bg-line text-base text-line-foreground">
                             {station.code}
                           </span>
@@ -217,17 +251,20 @@ export function OpenVoltaExperience({
                       type="button"
                       variant="outline"
                       size="lg"
-                      disabled={pending || !hasAvailableStation}
+                      disabled={pending || stationsLoading || Boolean(stationsError) || !hasAvailableStation}
                       onClick={() => assignRoute(null)}
                       className="h-12 w-full rounded-xl text-base"
                     >
-                      {pending ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <Shuffle aria-hidden="true" />}
-                      Sorprendimi
+                      {pending ? (
+                        <LoaderCircle className="animate-spin" aria-hidden="true" />
+                      ) : <Shuffle aria-hidden="true" />
+                    }
+                    Sorprendimi
                     </Button>
                     <Button
                       type="button"
                       size="lg"
-                      disabled={pending || !routeIsAvailable}
+                      disabled={pending || stationsLoading || Boolean(stationsError) || !routeIsAvailable}
                       onClick={() => assignRoute(selectedSlugs)}
                       className="h-14 w-full rounded-xl text-base font-bold"
                     >
@@ -244,7 +281,13 @@ export function OpenVoltaExperience({
                       )}
                     </Button>
                     <p className="text-center text-sm text-muted-foreground">
-                      {!hasAvailableStation
+                      {stationsLoading
+                        ? 'Carico la disponibilità dei laboratori…'
+                        : stationsError
+                          ? stationsError
+                          : stations.length === 0
+                            ? 'Nessun laboratorio è attivo al momento. Chiedi aiuto all’accoglienza.'
+                            : !hasAvailableStation
                         ? 'Nessun laboratorio può ospitare il vostro gruppo: chiedi aiuto all’accoglienza.'
                         : 'Il tutor riceve il vostro nome e tutte le tappe scelte.'}
                     </p>
@@ -257,4 +300,9 @@ export function OpenVoltaExperience({
       </div>
     </div>
   )
+}
+
+function WelcomePage({ stations }: { stations: StationAvailability[] }) {
+  // stations is already StationAvailability[], pass it directly
+  return <OpenVoltaExperience stations={stations} />
 }
