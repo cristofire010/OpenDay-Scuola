@@ -89,15 +89,6 @@ export function OpenVoltaExperience({
   return (
     <div className="min-h-svh bg-foreground text-foreground">
       <div className="relative min-h-svh overflow-hidden">
-        <Image
-          src="/images/open-day-hero.webp"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover opacity-35"
-        />
-        <div className="absolute inset-0 bg-foreground/65" aria-hidden="true" />
         <div className="relative mx-auto flex min-h-svh w-full max-w-[1320px] flex-col px-4 py-4 sm:px-8 sm:py-6">
           <header className="flex items-center justify-between gap-4 rounded-full border border-background/15 bg-background/10 px-4 py-2 text-background backdrop-blur-md">
             <Brand tone="light" />
@@ -131,7 +122,7 @@ export function OpenVoltaExperience({
               </section>
             </main>
           ) : stage === 'welcome' ? (
-            <main id="main-content" className="flex flex-1 items-center justify-center py-8">
+            <main id="main-content" className="grid flex-1 items-center gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,620px)] lg:gap-10">
               <section className="w-full max-w-[620px] rounded-3xl border border-white/40 bg-background/95 p-6 shadow-2xl shadow-black/30 backdrop-blur-sm sm:p-10">
                 <p className="mb-4 text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">Open day della scuola · laboratori aperti</p>
                 <h1 className="display text-[clamp(2.5rem,8vw,5.5rem)]">OpenVolta ti aspetta</h1>
