@@ -119,15 +119,14 @@ export default async function GruppiPage() {
       </header>
 
       <main id="main-content" className="section-shell py-8 sm:py-10 lg:py-12">
-        <p className="inline-flex items-center gap-2 border border-[#111] bg-[#111] px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.12em] text-white">
+        <p className="inline-flex items-center gap-2 rounded-full bg-foreground px-3 py-1.5 text-sm font-bold text-background">
           <ShieldCheck className="size-4" aria-hidden="true" />
-          Area riservata / Regia
+          Area riservata
         </p>
-        <h1 className="display mt-4 text-[clamp(2.2rem,6vw,4.5rem)] uppercase leading-[0.95]">
-          Gestione gruppi
-        </h1>
-        <p className="mt-4 max-w-3xl text-lg leading-relaxed text-muted-foreground">
-          Pannello centralizzato per visualizzare, registrare, modificare ed organizzare tutti i gruppi dell’Open Day in modo semplice, veloce e ordinato.
+        <h1 className="display mt-4 text-[clamp(2rem,3.8vw,3.2rem)]">Gestione gruppi</h1>
+        <p className="mt-3 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+          Tutti i gruppi dell’Open Day in un unico posto: registra i nuovi arrivi, assegna tutor e percorso, apri i
+          biglietti con QR e chiudi i turni conclusi.
         </p>
 
         <div className="mt-8">

@@ -12,10 +12,8 @@ import {
   Clock3,
   Copy,
   ExternalLink,
-  Filter,
   LoaderCircle,
   Pencil,
-  Plus,
   QrCode,
   RefreshCw,
   RotateCcw,
@@ -39,6 +37,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { formatScanCode } from '@/lib/scan-codes'
+import { cn } from '@/lib/utils'
 
 export type ManagedGroup = {
   id: string
@@ -70,6 +69,7 @@ export type TutorOption = {
 
 type GroupFilter = 'all' | 'active' | 'queued' | 'waiting' | 'arrived' | 'completed'
 type SortOption = 'newest' | 'oldest' | 'name' | 'size'
+type GroupStatus = 'assigned' | 'queued' | 'arrived'
 
 const dateFormat = new Intl.DateTimeFormat('it-IT', {
   day: '2-digit',
@@ -83,42 +83,144 @@ const timeOnlyFormat = new Intl.DateTimeFormat('it-IT', {
   minute: '2-digit',
 })
 
-const statusFilters: Array<{ id: GroupFilter; label: string }> = [
-  { id: 'all', label: 'Tutti' },
-  { id: 'active', label: 'In corso' },
-  { id: 'queued', label: 'In coda' },
-  { id: 'waiting', label: 'Attesi' },
-  { id: 'arrived', label: 'Presenti' },
-  { id: 'completed', label: 'Conclusi' },
+const fieldClass = 'mt-1.5 h-10 rounded-lg bg-background text-sm'
+const selectClass =
+  'mt-1.5 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+
+const statusOptions: Array<{ value: GroupStatus; label: string }> = [
+  { value: 'assigned', label: 'Atteso' },
+  { value: 'queued', label: 'In coda' },
+  { value: 'arrived', label: 'Presente' },
 ]
 
 function getStatusBadge(group: ManagedGroup) {
   if (group.completedAt) {
     return {
       label: 'Concluso',
-      icon: <CheckCheck className="size-3.5" aria-hidden="true" />,
-      className: 'bg-muted text-muted-foreground border border-border',
+      icon: CheckCheck,
+      className: 'bg-muted text-muted-foreground',
     }
   }
   if (group.status === 'queued') {
     return {
       label: 'In coda',
-      icon: <Clock3 className="size-3.5" aria-hidden="true" />,
-      className: 'bg-[#e61919] text-white',
+      icon: Clock3,
+      className: 'bg-arancio/25 text-foreground',
     }
   }
   if (group.status === 'arrived') {
     return {
       label: 'Presente',
-      icon: <Check className="size-3.5" aria-hidden="true" />,
-      className: 'bg-[#111] text-white',
+      icon: Check,
+      className: 'bg-verde/25 text-foreground',
     }
   }
   return {
     label: 'Atteso',
-    icon: <UserCheck className="size-3.5" aria-hidden="true" />,
-    className: 'bg-[#e7e4dc] text-[#111] border border-[#d0cdc4]',
+    icon: UserCheck,
+    className: 'bg-blu/10 text-blu',
   }
+}
+
+function SizeSelector({ value, onChange }: { value: number; onChange: (size: number) => void }) {
+  return (
+    <div className="mt-1.5 flex gap-1.5" role="group" aria-label="Numero di partecipanti">
+      {[1, 2, 3, 4, 5, 6].map((size) => (
+        <button
+          key={size}
+          type="button"
+          aria-pressed={value === size}
+          onClick={() => onChange(size)}
+          className={cn(
+            'h-10 flex-1 rounded-lg border text-sm font-bold tabular-nums transition-colors',
+            value === size
+              ? 'border-foreground bg-foreground text-background'
+              : 'border-border bg-background hover:bg-muted',
+          )}
+        >
+          {size}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function StatusPicker({ value, onChange }: { value: GroupStatus; onChange: (status: GroupStatus) => void }) {
+  return (
+    <div className="mt-1.5 flex gap-1.5" role="group" aria-label="Stato del gruppo">
+      {statusOptions.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={value === option.value}
+          onClick={() => onChange(option.value)}
+          className={cn(
+            'h-10 flex-1 rounded-lg border px-2 text-sm font-semibold transition-colors',
+            value === option.value
+              ? 'border-foreground bg-foreground text-background'
+              : 'border-border bg-background hover:bg-muted',
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function StationPicker({
+  stations,
+  selected,
+  onToggle,
+}: {
+  stations: StationOption[]
+  selected: string[]
+  onToggle: (slug: string) => void
+}) {
+  if (stations.length === 0) {
+    return (
+      <p className="mt-1.5 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+        Nessuna tappa attiva disponibile.
+      </p>
+    )
+  }
+
+  return (
+    <div className="mt-1.5 grid max-h-56 gap-1.5 overflow-y-auto rounded-xl border bg-muted/40 p-2 sm:grid-cols-2">
+      {stations.map((station) => {
+        const index = selected.indexOf(station.slug)
+        const isSelected = index >= 0
+        return (
+          <button
+            key={station.slug}
+            type="button"
+            aria-pressed={isSelected}
+            onClick={() => onToggle(station.slug)}
+            className={cn(
+              'flex items-center gap-2 rounded-lg border px-2 py-2 text-left text-sm transition-colors',
+              isSelected
+                ? 'border-foreground bg-card shadow-sm'
+                : 'border-transparent bg-card/60 hover:bg-card',
+            )}
+          >
+            <span
+              className={cn(
+                'flex size-5 shrink-0 items-center justify-center rounded-md border text-[10px] font-bold tabular-nums',
+                isSelected ? 'border-foreground bg-foreground text-background' : 'border-input text-input',
+              )}
+            >
+              {isSelected ? index + 1 : '·'}
+            </span>
+            <span className="shrink-0 font-mono text-[11px] font-bold text-muted-foreground">{station.code}</span>
+            <span className="min-w-0 flex-1 truncate font-medium">{station.title}</span>
+            {station.room && (
+              <span className="hidden shrink-0 text-[10px] text-muted-foreground sm:block">{station.room}</span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
 export function GroupManager({
@@ -157,7 +259,7 @@ export function GroupManager({
     availableStations.length > 0 ? [availableStations[0].slug] : [],
   )
   const [newTutorName, setNewTutorName] = useState('')
-  const [newStatus, setNewStatus] = useState<'assigned' | 'queued' | 'arrived'>('assigned')
+  const [newStatus, setNewStatus] = useState<GroupStatus>('assigned')
   const [isCreating, setIsCreating] = useState(false)
 
   // Edit form state
@@ -165,7 +267,7 @@ export function GroupManager({
   const [editGroupSize, setEditGroupSize] = useState(1)
   const [editSelectedStations, setEditSelectedStations] = useState<string[]>([])
   const [editTutorName, setEditTutorName] = useState('')
-  const [editStatus, setEditStatus] = useState<'assigned' | 'queued' | 'arrived'>('assigned')
+  const [editStatus, setEditStatus] = useState<GroupStatus>('assigned')
   const [isSavingEdit, setIsSavingEdit] = useState(false)
 
   useEffect(() => {
@@ -174,20 +276,30 @@ export function GroupManager({
 
   // Count calculations
   const totalCount = groups.length
-  const totalVisitors = groups.reduce((sum, g) => sum + (g.groupSize || 1), 0)
-  const activeCount = groups.filter((g) => !g.completedAt).length
-  const queuedCount = groups.filter((g) => !g.completedAt && g.status === 'queued').length
-  const waitingCount = groups.filter((g) => !g.completedAt && g.status === 'assigned').length
-  const arrivedCount = groups.filter((g) => !g.completedAt && g.status === 'arrived').length
-  const completedCount = groups.filter((g) => Boolean(g.completedAt)).length
+  const totalVisitors = groups.reduce((sum, group) => sum + (group.groupSize || 1), 0)
+  const activeCount = groups.filter((group) => !group.completedAt).length
+  const queuedCount = groups.filter((group) => !group.completedAt && group.status === 'queued').length
+  const waitingCount = groups.filter((group) => !group.completedAt && group.status === 'assigned').length
+  const arrivedCount = groups.filter((group) => !group.completedAt && group.status === 'arrived').length
+  const completedCount = groups.filter((group) => Boolean(group.completedAt)).length
 
-  const counts: Record<GroupFilter, number> = {
-    all: totalCount,
-    active: activeCount,
-    queued: queuedCount,
-    waiting: waitingCount,
-    arrived: arrivedCount,
-    completed: completedCount,
+  const stats: Array<{ id: GroupFilter; label: string; hint: string; value: number; dot?: string }> = [
+    { id: 'all', label: 'Gruppi', hint: `${totalVisitors} visitatori`, value: totalCount },
+    { id: 'active', label: 'In corso', hint: 'turni aperti', value: activeCount },
+    { id: 'queued', label: 'In coda', hint: 'da assegnare', value: queuedCount, dot: 'bg-arancio' },
+    { id: 'waiting', label: 'Attesi', hint: 'non ancora arrivati', value: waitingCount },
+    { id: 'arrived', label: 'Presenti', hint: 'in laboratorio', value: arrivedCount, dot: 'bg-verde' },
+    { id: 'completed', label: 'Conclusi', hint: 'in archivio', value: completedCount },
+  ]
+
+  const hasActiveFilters =
+    query !== '' || statusFilter !== 'all' || stationFilter !== 'all' || tutorFilter !== 'all'
+
+  function resetFilters() {
+    setQuery('')
+    setStatusFilter('all')
+    setStationFilter('all')
+    setTutorFilter('all')
   }
 
   // Filter & sort
@@ -203,7 +315,7 @@ export function GroupManager({
 
     // Station filter
     if (stationFilter !== 'all') {
-      const hasStation = group.stations.some((s) => s.slug === stationFilter)
+      const hasStation = group.stations.some((station) => station.slug === stationFilter)
       if (!hasStation) return false
     }
 
@@ -221,7 +333,7 @@ export function GroupManager({
         group.code,
         formatScanCode(group.code),
         group.tutorName ?? '',
-        ...group.stations.flatMap((s) => [s.code, s.title, s.slug]),
+        ...group.stations.flatMap((station) => [station.code, station.title, station.slug]),
       ]
         .join(' ')
         .toLocaleLowerCase('it')
@@ -395,9 +507,9 @@ export function GroupManager({
     setEditGroup(group)
     setEditName(group.name)
     setEditGroupSize(group.groupSize)
-    setEditSelectedStations(group.stations.map((s) => s.slug))
+    setEditSelectedStations(group.stations.map((station) => station.slug))
     setEditTutorName(group.tutorName ?? '')
-    setEditStatus((group.status as 'assigned' | 'queued' | 'arrived') || 'assigned')
+    setEditStatus((group.status as GroupStatus) || 'assigned')
   }
 
   // Save Edit Action
@@ -448,6 +560,7 @@ export function GroupManager({
   // Open Ticket / QR Modal
   async function openTicketModal(group: ManagedGroup) {
     setTicketGroup(group)
+    setTicketQrData(null)
     try {
       const qrDataUrl = await QRCode.toDataURL(group.code, {
         width: 280,
@@ -455,8 +568,8 @@ export function GroupManager({
         color: { dark: '#111111', light: '#ffffff' },
       })
       setTicketQrData(qrDataUrl)
-    } catch (e) {
-      console.error('Generazione QR non riuscita', e)
+    } catch (error) {
+      console.error('Generazione QR non riuscita', error)
       setTicketQrData(null)
     }
   }
@@ -473,195 +586,58 @@ export function GroupManager({
   }
 
   return (
-    <section aria-labelledby="groups-title" className="text-[#111]">
-      {/* KPI METRIC CARDS */}
-      <div className="grid grid-cols-2 gap-px border-2 border-[#111] bg-[#111] sm:grid-cols-3 lg:grid-cols-6">
-        <button
-          type="button"
-          onClick={() => setStatusFilter('all')}
-          className={`p-4 text-left transition-colors hover:bg-neutral-100 ${
-            statusFilter === 'all' ? 'bg-white' : 'bg-[#f4f4f0]'
-          }`}
-        >
-          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-            Tutti i gruppi
-          </p>
-          <p className="mt-1 text-3xl font-black tabular-nums">{totalCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{totalVisitors} visitatori</p>
-        </button>
+    <section aria-labelledby="groups-title">
+      <h2 id="groups-title" className="sr-only">
+        Gruppi dell’Open Day
+      </h2>
 
-        <button
-          type="button"
-          onClick={() => setStatusFilter('active')}
-          className={`p-4 text-left transition-colors hover:bg-neutral-100 ${
-            statusFilter === 'active' ? 'bg-white' : 'bg-[#f4f4f0]'
-          }`}
-        >
-          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-            In corso
-          </p>
-          <p className="mt-1 text-3xl font-black tabular-nums">{activeCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">attivi ora</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setStatusFilter('queued')}
-          className={`p-4 text-left transition-colors hover:bg-neutral-100 ${
-            statusFilter === 'queued' ? 'bg-white' : 'bg-[#f4f4f0]'
-          }`}
-        >
-          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-[#e61919]">
-            In coda
-          </p>
-          <p className="mt-1 text-3xl font-black tabular-nums text-[#e61919]">{queuedCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">in attesa tutor</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setStatusFilter('waiting')}
-          className={`p-4 text-left transition-colors hover:bg-neutral-100 ${
-            statusFilter === 'waiting' ? 'bg-white' : 'bg-[#f4f4f0]'
-          }`}
-        >
-          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-            Attesi
-          </p>
-          <p className="mt-1 text-3xl font-black tabular-nums">{waitingCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">assegnati</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setStatusFilter('arrived')}
-          className={`p-4 text-left transition-colors hover:bg-neutral-100 ${
-            statusFilter === 'arrived' ? 'bg-white' : 'bg-[#f4f4f0]'
-          }`}
-        >
-          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-[#111]">
-            Presenti
-          </p>
-          <p className="mt-1 text-3xl font-black tabular-nums">{arrivedCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">in laboratorio</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setStatusFilter('completed')}
-          className={`p-4 text-left transition-colors hover:bg-neutral-100 ${
-            statusFilter === 'completed' ? 'bg-white' : 'bg-[#f4f4f0]'
-          }`}
-        >
-          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-            Conclusi
-          </p>
-          <p className="mt-1 text-3xl font-black tabular-nums">{completedCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">in archivio</p>
-        </button>
+      {/* Riepilogo: le tessere fungono anche da filtro per stato */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        {stats.map((stat) => {
+          const isActive = statusFilter === stat.id
+          return (
+            <button
+              key={stat.id}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => setStatusFilter(stat.id)}
+              className={cn(
+                'rounded-xl border bg-card p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md',
+                isActive ? 'border-foreground ring-1 ring-foreground' : 'border-border',
+              )}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-muted-foreground">{stat.label}</span>
+                {stat.dot && <span className={cn('size-2 rounded-full', stat.dot)} aria-hidden="true" />}
+              </span>
+              <span className="display mt-2 block text-3xl tabular-nums">{stat.value}</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">{stat.hint}</span>
+            </button>
+          )
+        })}
       </div>
 
-      {/* FEEDBACK ALERT */}
-      {feedback && (
-        <div
-          role="alert"
-          className={`mt-4 flex items-center justify-between border-2 p-3 font-medium ${
-            feedback.type === 'success'
-              ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
-              : 'border-[#e61919] bg-red-50 text-[#a31313]'
-          }`}
-        >
-          <span>{feedback.message}</span>
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            className="p-1 hover:opacity-75"
-            aria-label="Chiudi avviso"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-      )}
-
-      {/* TOOLBAR CONTROLS */}
-      <div className="mt-6 flex flex-col gap-4 border-y-2 border-[#111] py-4">
-        {/* Row 1: Status filters & Primary Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-1.5" aria-label="Filtra gruppi per stato">
-            {statusFilters.map((item) => {
-              const active = statusFilter === item.id
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setStatusFilter(item.id)}
-                  className={`flex h-9 items-center gap-2 border px-3 text-xs font-bold transition-colors ${
-                    active
-                      ? 'border-[#111] bg-[#111] text-white'
-                      : 'border-[#111] bg-white text-[#111] hover:bg-neutral-100'
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  <span
-                    className={`font-mono text-[10px] px-1.5 py-0.5 ${
-                      active ? 'bg-white/20 text-white' : 'bg-neutral-100 text-[#111]'
-                    }`}
-                  >
-                    {counts[item.id]}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              onClick={() => setCreateModalOpen(true)}
-              className="h-9 rounded-none border-2 border-[#111] bg-[#111] px-4 font-bold text-white hover:bg-neutral-800"
-            >
-              <Plus className="mr-1.5 size-4" aria-hidden="true" />
-              Nuovo gruppo
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.refresh()}
-              className="h-9 rounded-none border border-[#111] px-3 font-semibold"
-            >
-              <RefreshCw className="mr-1.5 size-3.5" aria-hidden="true" />
-              Aggiorna
-            </Button>
-            <Button
-              nativeButton={false}
-              render={<Link href="/archivio" />}
-              variant="outline"
-              className="h-9 rounded-none border border-[#111] px-3 font-semibold"
-            >
-              <Archive className="mr-1.5 size-3.5" aria-hidden="true" />
-              Archivio
-            </Button>
-          </div>
-        </div>
-
-        {/* Row 2: Secondary Filters & Search */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Search box */}
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+      {/* Barra strumenti */}
+      <div className="mt-6 rounded-2xl border bg-card p-4 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
             <input
               type="search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca per nome, codice QR, tutor o tappa..."
-              className="h-9 w-full border border-[#111] bg-white pl-9 pr-8 text-xs outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-[#111]"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Cerca per nome, codice biglietto, tutor o tappa…"
+              aria-label="Cerca gruppi"
+              className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-9 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => setQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 aria-label="Cancella ricerca"
               >
                 <X className="size-3.5" />
@@ -669,39 +645,60 @@ export function GroupManager({
             )}
           </div>
 
-          {/* Filter by Station */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.refresh()}
+              className="h-10 rounded-lg"
+            >
+              <RefreshCw aria-hidden="true" />
+              Aggiorna
+            </Button>
+            <Button
+              nativeButton={false}
+              render={<Link href="/archivio" />}
+              variant="outline"
+              className="h-10 rounded-lg"
+            >
+              <Archive aria-hidden="true" />
+              Archivio
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-end gap-x-4 gap-y-3 border-t pt-3">
           {availableStations.length > 0 && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <label htmlFor="filter-station" className="font-mono font-bold uppercase text-muted-foreground shrink-0">
-                Tappa:
-              </label>
+            <div className="min-w-0">
+              <Label htmlFor="filter-station" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Tappa
+              </Label>
               <select
                 id="filter-station"
                 value={stationFilter}
-                onChange={(e) => setStationFilter(e.target.value)}
-                className="h-9 border border-[#111] bg-white px-2.5 text-xs outline-none focus:ring-1 focus:ring-[#111]"
+                onChange={(event) => setStationFilter(event.target.value)}
+                className={cn(selectClass, 'mt-1 min-w-[180px]')}
               >
                 <option value="all">Tutte le tappe</option>
                 {availableStations.map((station) => (
                   <option key={station.slug} value={station.slug}>
-                    {station.code} - {station.title}
+                    {station.code} · {station.title}
                   </option>
                 ))}
               </select>
             </div>
           )}
 
-          {/* Filter by Tutor */}
           {availableTutors.length > 0 && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <label htmlFor="filter-tutor" className="font-mono font-bold uppercase text-muted-foreground shrink-0">
-                Tutor:
-              </label>
+            <div className="min-w-0">
+              <Label htmlFor="filter-tutor" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Tutor
+              </Label>
               <select
                 id="filter-tutor"
                 value={tutorFilter}
-                onChange={(e) => setTutorFilter(e.target.value)}
-                className="h-9 border border-[#111] bg-white px-2.5 text-xs outline-none focus:ring-1 focus:ring-[#111]"
+                onChange={(event) => setTutorFilter(event.target.value)}
+                className={cn(selectClass, 'mt-1 min-w-[170px]')}
               >
                 <option value="all">Tutti i tutor</option>
                 <option value="unassigned">Non assegnato</option>
@@ -714,16 +711,15 @@ export function GroupManager({
             </div>
           )}
 
-          {/* Sort order */}
-          <div className="flex items-center gap-1.5 text-xs ml-auto">
-            <label htmlFor="sort-by" className="font-mono font-bold uppercase text-muted-foreground shrink-0">
-              Ordina:
-            </label>
+          <div className="min-w-0 sm:ml-auto">
+            <Label htmlFor="sort-by" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Ordina
+            </Label>
             <select
               id="sort-by"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="h-9 border border-[#111] bg-white px-2.5 text-xs outline-none focus:ring-1 focus:ring-[#111]"
+              onChange={(event) => setSortBy(event.target.value as SortOption)}
+              className={cn(selectClass, 'mt-1 min-w-[190px]')}
             >
               <option value="newest">Più recenti</option>
               <option value="oldest">Meno recenti</option>
@@ -734,267 +730,258 @@ export function GroupManager({
         </div>
       </div>
 
-      {/* LIST HEADER / SUMMARY */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs font-mono font-bold uppercase tracking-[0.1em]">
-        <p>
-          Gruppi visualizzati: {sortedGroups.length} di {groups.length}
-        </p>
-        {(query || statusFilter !== 'all' || stationFilter !== 'all' || tutorFilter !== 'all') && (
+      {/* Feedback */}
+      {feedback && (
+        <div
+          role="alert"
+          className={cn(
+            'mt-4 flex items-start justify-between gap-3 rounded-xl border p-3 text-sm font-medium',
+            feedback.type === 'success'
+              ? 'border-verde/40 bg-verde/10 text-foreground'
+              : 'border-destructive/30 bg-destructive/10 text-destructive',
+          )}
+        >
+          <span>{feedback.message}</span>
           <button
             type="button"
-            onClick={() => {
-              setQuery('')
-              setStatusFilter('all')
-              setStationFilter('all')
-              setTutorFilter('all')
-            }}
-            className="text-[#e61919] hover:underline"
+            onClick={() => setFeedback(null)}
+            className="rounded-md p-0.5 opacity-70 transition-opacity hover:opacity-100"
+            aria-label="Chiudi avviso"
+          >
+            <X className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
+      {/* Conteggio risultati */}
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-bold text-foreground">{sortedGroups.length}</span> gruppi visualizzati su{' '}
+          {groups.length}
+          {statusFilter !== 'all' && (
+            <>
+              {' · '}
+              filtro <span className="font-semibold text-foreground">{stats.find((stat) => stat.id === statusFilter)?.label}</span>
+            </>
+          )}
+        </p>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="text-sm font-semibold text-blu underline-offset-4 hover:underline"
           >
             Azzera filtri
           </button>
         )}
       </div>
 
-      {/* GROUPS LIST */}
+      {/* Elenco gruppi */}
       {sortedGroups.length === 0 ? (
-        <div className="mt-4 border-2 border-dashed border-[#111] bg-[#f4f4f0] p-10 text-center">
+        <div className="mt-3 rounded-2xl border border-dashed bg-card/60 p-10 text-center">
           <p className="text-base font-semibold">Nessun gruppo trovato</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {groups.length === 0
-              ? 'Non ci sono gruppi registrati. Usa "+ Nuovo gruppo" per crearne uno.'
+              ? 'Non ci sono ancora gruppi registrati.'
               : 'Nessun gruppo corrisponde ai filtri impostati.'}
           </p>
           {groups.length > 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setQuery('')
-                setStatusFilter('all')
-                setStationFilter('all')
-                setTutorFilter('all')
-              }}
-              className="mt-4 h-9 rounded-none border border-[#111]"
-            >
+            <Button type="button" variant="outline" onClick={resetFilters} className="mt-4 h-9 rounded-lg">
               Mostra tutti i gruppi
             </Button>
           )}
         </div>
       ) : (
-        <ul className="mt-4 border-t-2 border-[#111]">
+        <ul className="mt-3 flex flex-col gap-3">
           {sortedGroups.map((group) => {
             const isBusy = pendingId === group.id
             const isArrived = group.status === 'arrived'
             const isQueued = group.status === 'queued'
             const isCompleted = Boolean(group.completedAt)
             const badge = getStatusBadge(group)
+            const BadgeIcon = badge.icon
             const formattedCode = formatScanCode(group.code)
 
             return (
               <li
                 key={group.id}
-                className={`grid gap-4 border-b border-[#111] p-4 transition-colors sm:p-5 lg:grid-cols-[minmax(260px,1.2fr)_minmax(180px,0.9fr)_minmax(240px,1.2fr)_auto] lg:items-center ${
-                  isCompleted ? 'bg-neutral-50/70' : 'bg-white'
-                }`}
+                className={cn(
+                  'rounded-2xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5',
+                  isCompleted ? 'border-border/70 bg-card/70' : 'border-border',
+                )}
               >
-                {/* 1. Group info & tickets */}
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="display-sm text-xl font-bold tracking-tight text-[#111]">
-                      {group.name}
-                    </h3>
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wide ${badge.className}`}
-                    >
-                      {badge.icon}
-                      {badge.label}
-                    </span>
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="display-sm truncate text-xl">{group.name}</h3>
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold',
+                          badge.className,
+                        )}
+                      >
+                        <BadgeIcon className="size-3.5" aria-hidden="true" />
+                        {badge.label}
+                      </span>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground">
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(group.code, group.id)}
+                        title="Clicca per copiare il codice"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-2 py-1 font-mono text-xs font-bold text-foreground transition-colors hover:bg-muted"
+                      >
+                        <Ticket className="size-3.5" aria-hidden="true" />
+                        {formattedCode}
+                        {copiedCode === group.id ? (
+                          <Check className="size-3 text-verde" aria-hidden="true" />
+                        ) : (
+                          <Copy className="size-3 opacity-60" aria-hidden="true" />
+                        )}
+                      </button>
+
+                      <span className="inline-flex items-center gap-1.5">
+                        <UsersRound className="size-3.5" aria-hidden="true" />
+                        {group.groupSize} {group.groupSize === 1 ? 'persona' : 'persone'}
+                      </span>
+
+                      <span title="Ora di registrazione">{dateFormat.format(new Date(group.createdAt))}</span>
+
+                      {group.arrivedAt && !group.completedAt && (
+                        <span className="inline-flex items-center gap-1.5 font-medium text-foreground" title="Ora di arrivo">
+                          <span className="size-1.5 rounded-full bg-verde" aria-hidden="true" />
+                          Arrivo {timeOnlyFormat.format(new Date(group.arrivedAt))}
+                        </span>
+                      )}
+
+                      {group.completedAt && (
+                        <span title="Ora di conclusione">
+                          Concluso {timeOnlyFormat.format(new Date(group.completedAt))}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-muted-foreground">
-                    <button
+                  <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                    {!isCompleted && !isQueued && (
+                      <Button
+                        type="button"
+                        variant={isArrived ? 'outline' : 'default'}
+                        disabled={isBusy}
+                        onClick={() => toggleArrival(group)}
+                        title={isArrived ? 'Annulla presenza' : 'Segna come presente'}
+                        className="h-9 rounded-lg px-3 font-semibold"
+                      >
+                        {isBusy ? (
+                          <LoaderCircle className="animate-spin" aria-hidden="true" />
+                        ) : isArrived ? (
+                          <Undo2 aria-hidden="true" />
+                        ) : (
+                          <Check aria-hidden="true" />
+                        )}
+                        {isArrived ? 'Annulla presenza' : 'Presente'}
+                      </Button>
+                    )}
+
+                    <Button
                       type="button"
-                      onClick={() => copyToClipboard(group.code, group.id)}
-                      title="Clicca per copiare il codice"
-                      className="inline-flex items-center gap-1 font-bold text-[#111] hover:underline"
+                      variant="outline"
+                      disabled={isBusy}
+                      onClick={() => toggleCompletion(group, !isCompleted)}
+                      title={isCompleted ? 'Riapri il turno di questo gruppo' : 'Chiudi il turno di questo gruppo'}
+                      className="h-9 rounded-lg px-3 font-semibold"
                     >
-                      <Ticket className="size-3.5" aria-hidden="true" />
-                      {formattedCode}
-                      {copiedCode === group.id ? (
-                        <Check className="size-3 text-emerald-600" />
+                      {isBusy ? (
+                        <LoaderCircle className="animate-spin" aria-hidden="true" />
+                      ) : isCompleted ? (
+                        <RotateCcw aria-hidden="true" />
                       ) : (
-                        <Copy className="size-3 opacity-60" />
+                        <CheckCheck aria-hidden="true" />
                       )}
-                    </button>
+                      {isCompleted ? 'Riapri' : 'Chiudi'}
+                    </Button>
 
-                    <span className="inline-flex items-center gap-1 font-semibold text-[#111]">
-                      <UsersRound className="size-3.5" aria-hidden="true" />
-                      {group.groupSize} {group.groupSize === 1 ? 'persona' : 'persone'}
-                    </span>
-
-                    <span title="Ora di registrazione">
-                      {dateFormat.format(new Date(group.createdAt))}
-                    </span>
-
-                    {group.arrivedAt && !group.completedAt && (
-                      <span className="text-emerald-700" title="Ora di arrivo">
-                        • Arrivo: {timeOnlyFormat.format(new Date(group.arrivedAt))}
-                      </span>
-                    )}
-
-                    {group.completedAt && (
-                      <span className="text-muted-foreground" title="Ora di conclusione">
-                        • Concluso: {timeOnlyFormat.format(new Date(group.completedAt))}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => openTicketModal(group)}
+                        title="Biglietto e codice QR"
+                        aria-label={`Biglietto di ${group.name}`}
+                        className="size-9 rounded-lg"
+                      >
+                        <QrCode aria-hidden="true" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => openEditModal(group)}
+                        title="Modifica dati gruppo"
+                        aria-label={`Modifica ${group.name}`}
+                        className="size-9 rounded-lg"
+                      >
+                        <Pencil aria-hidden="true" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => setDeleteGroup(group)}
+                        title="Elimina gruppo definitivamente"
+                        aria-label={`Elimina ${group.name}`}
+                        className="size-9 rounded-lg"
+                      >
+                        <Trash2 aria-hidden="true" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
-                {/* 2. Tutor info */}
-                <div className="min-w-0 border-l-2 border-[#111] pl-3">
-                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                    Tutor
-                  </p>
-                  <p className="mt-1 truncate font-semibold text-sm">
-                    {group.tutorName ? (
-                      <span className="inline-flex items-center gap-1 text-[#111]">
-                        <UserCheck className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                        {group.tutorName}
-                      </span>
-                    ) : isQueued ? (
-                      <span className="text-[#e61919] font-medium">In attesa di assegnazione</span>
+                <div className="mt-4 grid gap-4 border-t pt-4 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tutor</p>
+                    <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold">
+                      {group.tutorName ? (
+                        <>
+                          <UserCheck className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                          <span className="truncate">{group.tutorName}</span>
+                        </>
+                      ) : isQueued ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-arancio/25 px-2 py-0.5 text-foreground">
+                          <Clock3 className="size-3.5" aria-hidden="true" />
+                          In attesa di assegnazione
+                        </span>
+                      ) : (
+                        <span className="font-normal text-muted-foreground">Non assegnato</span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Percorso · {group.stations.length} {group.stations.length === 1 ? 'tappa' : 'tappe'}
+                    </p>
+                    {group.stations.length > 0 ? (
+                      <ol className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        {group.stations.map((station, index) => (
+                          <li key={station.slug} className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2 py-1 text-xs">
+                              <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
+                                {index + 1}
+                              </span>
+                              <span className="font-mono font-bold">{station.code}</span>
+                              <span className="max-w-[180px] truncate font-medium">{station.title}</span>
+                            </span>
+                            {index < group.stations.length - 1 && (
+                              <ArrowRight className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+                            )}
+                          </li>
+                        ))}
+                      </ol>
                     ) : (
-                      <span className="text-muted-foreground font-normal">Non assegnato</span>
+                      <p className="mt-1 text-sm text-muted-foreground">Nessuna tappa assegnata</p>
                     )}
-                  </p>
-                </div>
-
-                {/* 3. Station route */}
-                <div className="min-w-0 border-l-2 border-[#111] pl-3">
-                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                    Percorso assegnato ({group.stations.length})
-                  </p>
-                  {group.stations.length > 0 ? (
-                    <ol className="mt-1 flex flex-wrap gap-x-2 gap-y-1">
-                      {group.stations.map((station, index) => (
-                        <li key={station.slug} className="text-xs">
-                          <span className="font-mono font-bold bg-neutral-200 px-1 py-0.5 text-[#111]">
-                            {station.code}
-                          </span>{' '}
-                          <span className="font-medium">{station.title}</span>
-                          {index < group.stations.length - 1 && (
-                            <ArrowRight className="inline-block ml-1 size-3 text-[#e61919]" aria-hidden="true" />
-                          )}
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="mt-1 text-xs text-muted-foreground">Nessuna tappa assegnata</p>
-                  )}
-                </div>
-
-                {/* 4. Action buttons */}
-                <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
-                  {/* Presence button */}
-                  {!isCompleted && !isQueued && (
-                    <Button
-                      type="button"
-                      variant={isArrived ? 'outline' : 'default'}
-                      disabled={isBusy}
-                      onClick={() => toggleArrival(group)}
-                      title={isArrived ? 'Annulla presenza' : 'Segna come presente'}
-                      className="h-8 rounded-none border border-[#111] px-2.5 text-xs font-bold"
-                    >
-                      {isBusy ? (
-                        <LoaderCircle className="animate-spin size-3.5" aria-hidden="true" />
-                      ) : isArrived ? (
-                        <>
-                          <Undo2 className="size-3.5 mr-1" aria-hidden="true" />
-                          Annulla presenza
-                        </>
-                      ) : (
-                        <>
-                          <Check className="size-3.5 mr-1" aria-hidden="true" />
-                          Presente
-                        </>
-                      )}
-                    </Button>
-                  )}
-
-                  {/* Complete / Restore button */}
-                  {!isCompleted ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={isBusy}
-                      onClick={() => toggleCompletion(group, true)}
-                      title="Chiudi il turno di questo gruppo"
-                      className="h-8 rounded-none border border-[#111] px-2.5 text-xs font-semibold"
-                    >
-                      {isBusy ? (
-                        <LoaderCircle className="animate-spin size-3.5" aria-hidden="true" />
-                      ) : (
-                        <>
-                          <CheckCheck className="size-3.5 mr-1" aria-hidden="true" />
-                          Chiudi
-                        </>
-                      )}
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={isBusy}
-                      onClick={() => toggleCompletion(group, false)}
-                      title="Riapri il turno di questo gruppo"
-                      className="h-8 rounded-none border border-[#111] px-2.5 text-xs font-semibold"
-                    >
-                      {isBusy ? (
-                        <LoaderCircle className="animate-spin size-3.5" aria-hidden="true" />
-                      ) : (
-                        <>
-                          <RotateCcw className="size-3.5 mr-1" aria-hidden="true" />
-                          Riapri
-                        </>
-                      )}
-                    </Button>
-                  )}
-
-                  {/* QR Ticket button */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => openTicketModal(group)}
-                    title="Vedi biglietto e codice QR"
-                    className="h-8 rounded-none border border-[#111] px-2 text-xs"
-                  >
-                    <QrCode className="size-3.5" aria-hidden="true" />
-                    <span className="sr-only">QR</span>
-                  </Button>
-
-                  {/* Edit button */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => openEditModal(group)}
-                    title="Modifica dati gruppo"
-                    className="h-8 rounded-none border border-[#111] px-2 text-xs"
-                  >
-                    <Pencil className="size-3.5" aria-hidden="true" />
-                    <span className="sr-only">Modifica</span>
-                  </Button>
-
-                  {/* Delete button */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setDeleteGroup(group)}
-                    title="Elimina gruppo definitivamente"
-                    className="h-8 rounded-none border border-red-300 text-red-700 hover:bg-red-50 px-2 text-xs"
-                  >
-                    <Trash2 className="size-3.5" aria-hidden="true" />
-                    <span className="sr-only">Elimina</span>
-                  </Button>
+                  </div>
                 </div>
               </li>
             )
@@ -1004,74 +991,45 @@ export function GroupManager({
 
       {/* MODAL: NUOVO GRUPPO */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="max-w-lg rounded-none border-2 border-[#111] p-6 shadow-2xl">
+        <DialogContent className="rounded-2xl sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold uppercase tracking-tight">
-              Aggiungi nuovo gruppo
-            </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              Inserisci i dati del gruppo da registrare. Verrà generato automaticamente un codice biglietto univoco.
+            <DialogTitle className="display-sm text-xl">Nuovo gruppo</DialogTitle>
+            <DialogDescription>
+              Registra il gruppo all’ingresso. Il codice biglietto e il QR vengono generati automaticamente.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreateGroup} className="mt-4 space-y-4">
+          <form onSubmit={handleCreateGroup} className="flex flex-col gap-4">
             <div>
-              <Label htmlFor="create-name" className="text-xs font-bold uppercase">
-                Nome gruppo / referente *
-              </Label>
+              <Label htmlFor="create-name">Nome gruppo o referente</Label>
               <Input
                 id="create-name"
                 required
                 value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder="es. Famiglia Rossi, Liceo Volta 4B..."
-                className="mt-1 h-10 rounded-none border-[#111] text-sm"
+                onChange={(event) => setNewGroupName(event.target.value)}
+                placeholder="Es. Famiglia Rossi · Liceo Volta 4B"
+                className={fieldClass}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="create-size" className="text-xs font-bold uppercase">
-                  Partecipanti (1-6) *
-                </Label>
-                <Input
-                  id="create-size"
-                  type="number"
-                  min={1}
-                  max={6}
-                  required
-                  value={newGroupSize}
-                  onChange={(e) => setNewGroupSize(Math.max(1, Math.min(6, Number(e.target.value))))}
-                  className="mt-1 h-10 rounded-none border-[#111] text-sm"
-                />
+                <Label>Partecipanti</Label>
+                <SizeSelector value={newGroupSize} onChange={setNewGroupSize} />
               </div>
-
               <div>
-                <Label htmlFor="create-status" className="text-xs font-bold uppercase">
-                  Stato iniziale
-                </Label>
-                <select
-                  id="create-status"
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as 'assigned' | 'queued' | 'arrived')}
-                  className="mt-1 h-10 w-full border border-[#111] bg-white px-2.5 text-sm outline-none"
-                >
-                  <option value="assigned">Atteso (Assegnato)</option>
-                  <option value="queued">In coda</option>
-                  <option value="arrived">Già presente</option>
-                </select>
+                <Label>Stato iniziale</Label>
+                <StatusPicker value={newStatus} onChange={setNewStatus} />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="create-tutor" className="text-xs font-bold uppercase">
-                Tutor da assegnare
-              </Label>
+              <Label htmlFor="create-tutor">Tutor da assegnare</Label>
               <select
                 id="create-tutor"
                 value={newTutorName}
-                onChange={(e) => setNewTutorName(e.target.value)}
-                className="mt-1 h-10 w-full border border-[#111] bg-white px-2.5 text-sm outline-none"
+                onChange={(event) => setNewTutorName(event.target.value)}
+                className={selectClass}
               >
                 <option value="">Nessun tutor (assegna in seguito)</option>
                 {availableTutors.map((tutor) => (
@@ -1083,63 +1041,38 @@ export function GroupManager({
             </div>
 
             <div>
-              <Label className="text-xs font-bold uppercase">
-                Percorso / Tappe (seleziona almeno una) *
-              </Label>
-              <div className="mt-2 max-h-48 overflow-y-auto border border-[#111] p-2 space-y-1.5 bg-neutral-50">
-                {availableStations.map((station) => {
-                  const isChecked = newSelectedStations.includes(station.slug)
-                  return (
-                    <label
-                      key={station.slug}
-                      className={`flex items-center gap-2.5 p-2 text-xs cursor-pointer border transition-colors ${
-                        isChecked
-                          ? 'border-[#111] bg-white font-bold'
-                          : 'border-transparent hover:bg-neutral-200/50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setNewSelectedStations((prev) => [...prev, station.slug])
-                          } else {
-                            setNewSelectedStations((prev) => prev.filter((s) => s !== station.slug))
-                          }
-                        }}
-                        className="size-4 rounded-none accent-[#111]"
-                      />
-                      <span className="font-mono bg-neutral-200 px-1 py-0.5">{station.code}</span>
-                      <span className="flex-1 truncate">{station.title}</span>
-                      {station.room && (
-                        <span className="text-[10px] text-muted-foreground">{station.room}</span>
-                      )}
-                    </label>
-                  )
-                })}
+              <div className="flex items-baseline justify-between gap-2">
+                <Label>Percorso · tappe</Label>
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {newSelectedStations.length} selezionate
+                </span>
               </div>
+              <StationPicker
+                stations={availableStations}
+                selected={newSelectedStations}
+                onToggle={(slug) =>
+                  setNewSelectedStations((current) =>
+                    current.includes(slug) ? current.filter((item) => item !== slug) : [...current, slug],
+                  )
+                }
+              />
             </div>
 
-            <DialogFooter className="mt-6 flex gap-2">
+            <DialogFooter className="rounded-b-2xl">
               <Button
                 type="button"
                 variant="outline"
                 disabled={isCreating}
                 onClick={() => setCreateModalOpen(false)}
-                className="h-10 rounded-none border-[#111]"
+                className="h-10 rounded-lg"
               >
                 Annulla
               </Button>
-              <Button
-                type="submit"
-                disabled={isCreating}
-                className="h-10 rounded-none bg-[#111] text-white hover:bg-neutral-800"
-              >
+              <Button type="submit" disabled={isCreating} className="h-10 rounded-lg font-semibold">
                 {isCreating ? (
                   <>
-                    <LoaderCircle className="mr-2 size-4 animate-spin" />
-                    Creazione in corso...
+                    <LoaderCircle className="animate-spin" aria-hidden="true" />
+                    Creazione in corso…
                   </>
                 ) : (
                   'Crea gruppo'
@@ -1152,73 +1085,44 @@ export function GroupManager({
 
       {/* MODAL: MODIFICA GRUPPO */}
       <Dialog open={editGroup !== null} onOpenChange={(open) => !open && setEditGroup(null)}>
-        <DialogContent className="max-w-lg rounded-none border-2 border-[#111] p-6 shadow-2xl">
+        <DialogContent className="rounded-2xl sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold uppercase tracking-tight">
-              Modifica gruppo
-            </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              Modifica i dati, il tutor o il percorso assegnato a {editGroup?.name}.
+            <DialogTitle className="display-sm text-xl">Modifica gruppo</DialogTitle>
+            <DialogDescription>
+              Aggiorna i dati, il tutor, lo stato o il percorso di {editGroup?.name ?? 'questo gruppo'}.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSaveEdit} className="mt-4 space-y-4">
+          <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
             <div>
-              <Label htmlFor="edit-name" className="text-xs font-bold uppercase">
-                Nome gruppo *
-              </Label>
+              <Label htmlFor="edit-name">Nome gruppo</Label>
               <Input
                 id="edit-name"
                 required
                 value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="mt-1 h-10 rounded-none border-[#111] text-sm"
+                onChange={(event) => setEditName(event.target.value)}
+                className={fieldClass}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="edit-size" className="text-xs font-bold uppercase">
-                  Partecipanti (1-6) *
-                </Label>
-                <Input
-                  id="edit-size"
-                  type="number"
-                  min={1}
-                  max={6}
-                  required
-                  value={editGroupSize}
-                  onChange={(e) => setEditGroupSize(Math.max(1, Math.min(6, Number(e.target.value))))}
-                  className="mt-1 h-10 rounded-none border-[#111] text-sm"
-                />
+                <Label>Partecipanti</Label>
+                <SizeSelector value={editGroupSize} onChange={setEditGroupSize} />
               </div>
-
               <div>
-                <Label htmlFor="edit-status" className="text-xs font-bold uppercase">
-                  Stato
-                </Label>
-                <select
-                  id="edit-status"
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as 'assigned' | 'queued' | 'arrived')}
-                  className="mt-1 h-10 w-full border border-[#111] bg-white px-2.5 text-sm outline-none"
-                >
-                  <option value="assigned">Atteso (Assegnato)</option>
-                  <option value="queued">In coda</option>
-                  <option value="arrived">Presente</option>
-                </select>
+                <Label>Stato</Label>
+                <StatusPicker value={editStatus} onChange={setEditStatus} />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="edit-tutor" className="text-xs font-bold uppercase">
-                Tutor assegnato
-              </Label>
+              <Label htmlFor="edit-tutor">Tutor assegnato</Label>
               <select
                 id="edit-tutor"
                 value={editTutorName}
-                onChange={(e) => setEditTutorName(e.target.value)}
-                className="mt-1 h-10 w-full border border-[#111] bg-white px-2.5 text-sm outline-none"
+                onChange={(event) => setEditTutorName(event.target.value)}
+                className={selectClass}
               >
                 <option value="">Nessun tutor</option>
                 {availableTutors.map((tutor) => (
@@ -1230,63 +1134,38 @@ export function GroupManager({
             </div>
 
             <div>
-              <Label className="text-xs font-bold uppercase">
-                Percorso assegnato *
-              </Label>
-              <div className="mt-2 max-h-48 overflow-y-auto border border-[#111] p-2 space-y-1.5 bg-neutral-50">
-                {availableStations.map((station) => {
-                  const isChecked = editSelectedStations.includes(station.slug)
-                  return (
-                    <label
-                      key={station.slug}
-                      className={`flex items-center gap-2.5 p-2 text-xs cursor-pointer border transition-colors ${
-                        isChecked
-                          ? 'border-[#111] bg-white font-bold'
-                          : 'border-transparent hover:bg-neutral-200/50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setEditSelectedStations((prev) => [...prev, station.slug])
-                          } else {
-                            setEditSelectedStations((prev) => prev.filter((s) => s !== station.slug))
-                          }
-                        }}
-                        className="size-4 rounded-none accent-[#111]"
-                      />
-                      <span className="font-mono bg-neutral-200 px-1 py-0.5">{station.code}</span>
-                      <span className="flex-1 truncate">{station.title}</span>
-                      {station.room && (
-                        <span className="text-[10px] text-muted-foreground">{station.room}</span>
-                      )}
-                    </label>
-                  )
-                })}
+              <div className="flex items-baseline justify-between gap-2">
+                <Label>Percorso · tappe</Label>
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {editSelectedStations.length} selezionate
+                </span>
               </div>
+              <StationPicker
+                stations={availableStations}
+                selected={editSelectedStations}
+                onToggle={(slug) =>
+                  setEditSelectedStations((current) =>
+                    current.includes(slug) ? current.filter((item) => item !== slug) : [...current, slug],
+                  )
+                }
+              />
             </div>
 
-            <DialogFooter className="mt-6 flex gap-2">
+            <DialogFooter className="rounded-b-2xl">
               <Button
                 type="button"
                 variant="outline"
                 disabled={isSavingEdit}
                 onClick={() => setEditGroup(null)}
-                className="h-10 rounded-none border-[#111]"
+                className="h-10 rounded-lg"
               >
                 Annulla
               </Button>
-              <Button
-                type="submit"
-                disabled={isSavingEdit}
-                className="h-10 rounded-none bg-[#111] text-white hover:bg-neutral-800"
-              >
+              <Button type="submit" disabled={isSavingEdit} className="h-10 rounded-lg font-semibold">
                 {isSavingEdit ? (
                   <>
-                    <LoaderCircle className="mr-2 size-4 animate-spin" />
-                    Salvataggio...
+                    <LoaderCircle className="animate-spin" aria-hidden="true" />
+                    Salvataggio…
                   </>
                 ) : (
                   'Salva modifiche'
@@ -1299,20 +1178,18 @@ export function GroupManager({
 
       {/* MODAL: QR CODE E BIGLIETTO */}
       <Dialog open={ticketGroup !== null} onOpenChange={(open) => !open && setTicketGroup(null)}>
-        <DialogContent className="max-w-md rounded-none border-2 border-[#111] p-6 shadow-2xl text-center">
+        <DialogContent className="rounded-2xl sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold uppercase tracking-tight">
-              Biglietto {ticketGroup?.name}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
+            <DialogTitle className="display-sm text-xl">Biglietto di {ticketGroup?.name}</DialogTitle>
+            <DialogDescription>
               Mostra questo codice o QR al tutor all’arrivo.
             </DialogDescription>
           </DialogHeader>
 
           {ticketGroup && (
-            <div className="mt-4 flex flex-col items-center">
+            <div className="flex flex-col items-center">
               {ticketQrData ? (
-                <div className="border-2 border-[#111] p-3 bg-white shadow-sm">
+                <div className="rounded-2xl border bg-card p-3 shadow-sm">
                   <img
                     src={ticketQrData}
                     alt={`Codice QR per ${ticketGroup.name}`}
@@ -1320,39 +1197,36 @@ export function GroupManager({
                   />
                 </div>
               ) : (
-                <div className="flex size-56 items-center justify-center border-2 border-dashed border-[#111] bg-neutral-100">
-                  <LoaderCircle className="animate-spin size-8 text-muted-foreground" />
+                <div className="flex size-56 items-center justify-center rounded-2xl border border-dashed bg-muted/50">
+                  <LoaderCircle className="size-8 animate-spin text-muted-foreground" aria-hidden="true" />
                 </div>
               )}
 
-              <p className="mt-4 font-mono text-2xl font-black tracking-widest text-[#111]">
+              <p className="mt-4 font-mono text-2xl font-black tracking-[0.15em]">
                 {formatScanCode(ticketGroup.code)}
               </p>
 
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Gruppo di {ticketGroup.groupSize} {ticketGroup.groupSize === 1 ? 'persona' : 'persone'}
               </p>
 
-              <div className="mt-6 flex w-full flex-col gap-2">
+              <div className="mt-5 flex w-full flex-col gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() =>
-                    copyToClipboard(
-                      `${window.location.origin}/assegnazione/${ticketGroup.id}`,
-                      'ticket-link',
-                    )
+                    copyToClipboard(`${window.location.origin}/assegnazione/${ticketGroup.id}`, 'ticket-link')
                   }
-                  className="h-10 rounded-none border border-[#111] text-xs font-bold"
+                  className="h-10 rounded-lg font-semibold"
                 >
                   {copiedCode === 'ticket-link' ? (
                     <>
-                      <Check className="mr-1.5 size-4 text-emerald-600" />
-                      Link copiato negli appunti!
+                      <Check className="text-verde" aria-hidden="true" />
+                      Link copiato negli appunti
                     </>
                   ) : (
                     <>
-                      <Copy className="mr-1.5 size-4" />
+                      <Copy aria-hidden="true" />
                       Copia link biglietto
                     </>
                   )}
@@ -1361,16 +1235,11 @@ export function GroupManager({
                 <Button
                   nativeButton={false}
                   render={
-                    <a
-                      href={`/assegnazione/${ticketGroup.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    />
+                    <a href={`/assegnazione/${ticketGroup.id}`} target="_blank" rel="noopener noreferrer" />
                   }
-                  variant="default"
-                  className="h-10 rounded-none bg-[#111] text-white hover:bg-neutral-800 text-xs font-bold"
+                  className="h-10 rounded-lg font-semibold"
                 >
-                  <ExternalLink className="mr-1.5 size-4" />
+                  <ExternalLink aria-hidden="true" />
                   Apri pagina biglietto
                 </Button>
               </div>
@@ -1381,45 +1250,40 @@ export function GroupManager({
 
       {/* MODAL: CONFERMA ELIMINAZIONE */}
       <Dialog open={deleteGroup !== null} onOpenChange={(open) => !open && setDeleteGroup(null)}>
-        <DialogContent className="max-w-md rounded-none border-2 border-[#e61919] p-6 shadow-2xl">
+        <DialogContent className="rounded-2xl sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold uppercase tracking-tight text-[#e61919]">
-              Eliminare definitivamente?
-            </DialogTitle>
-            <DialogDescription className="text-sm text-foreground">
-              Sei sicuro di voler eliminare il gruppo{' '}
-              <strong className="text-[#111]">{deleteGroup?.name}</strong> (codice:{' '}
-              <span className="font-mono">{deleteGroup?.code}</span>)?
+            <DialogTitle className="display-sm text-xl">Eliminare definitivamente?</DialogTitle>
+            <DialogDescription>
+              Stai per eliminare il gruppo <strong className="text-foreground">{deleteGroup?.name}</strong> con
+              codice <span className="font-mono font-bold">{deleteGroup?.code}</span>. Il biglietto e le tappe
+              associate verranno rimossi: l’operazione non si può annullare.
             </DialogDescription>
           </DialogHeader>
 
-          <p className="mt-2 text-xs text-muted-foreground">
-            Questa operazione rimuove completamente il gruppo, il suo codice biglietto e tutte le tappe associate dal sistema.
-          </p>
-
-          <DialogFooter className="mt-6 flex gap-2">
+          <DialogFooter className="rounded-b-2xl">
             <Button
               type="button"
               variant="outline"
               disabled={pendingId !== null}
               onClick={() => setDeleteGroup(null)}
-              className="h-10 rounded-none border-[#111]"
+              className="h-10 rounded-lg"
             >
               Annulla
             </Button>
             <Button
               type="button"
+              variant="destructive"
               disabled={pendingId !== null}
               onClick={confirmDeleteGroup}
-              className="h-10 rounded-none bg-[#e61919] text-white hover:bg-red-700"
+              className="h-10 rounded-lg bg-destructive font-semibold text-white hover:bg-destructive/90"
             >
               {pendingId === deleteGroup?.id ? (
                 <>
-                  <LoaderCircle className="mr-2 size-4 animate-spin" />
-                  Eliminazione...
+                  <LoaderCircle className="animate-spin" aria-hidden="true" />
+                  Eliminazione…
                 </>
               ) : (
-                'Elimina definitivamente'
+                'Elimina gruppo'
               )}
             </Button>
           </DialogFooter>
