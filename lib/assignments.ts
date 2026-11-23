@@ -227,7 +227,10 @@ export async function createAssignment(
     for (const slugs of routeOptions) {
       const fits = slugs.every((slug) => {
         const station = stationRows.find((row) => row.slug === slug)
-        return station ? stationOccupancy[slug] + groupSize <= station.capacity : false
+        // Se non c'è occupazione registrata per questo station, assumiamo 0
+        // (getStationOccupancy restituisce solo gli station con almeno un partecipante)
+        const occupancy = stationOccupancy[slug] ?? 0
+        return station ? occupancy + groupSize <= station.capacity : false
       })
       if (!fits) continue
 

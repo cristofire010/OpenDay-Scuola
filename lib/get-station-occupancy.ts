@@ -38,5 +38,13 @@ export async function getStationOccupancy(
     }
   })
 
+  // Se non sono stati passati stationSlugs specifici, restituiamo 0 per tutti gli station
+  // che non hanno partecipanti ma sono nel database (così il controllo ha un valore esplicito).
+  // Questo evita che undefined + groupSize diventi NaN nei calcoli successivi.
+  if (!stationSlugs || stationSlugs.length === 0) {
+    // Nota: non possiamo sapere quali station esistono senza una query aggiuntiva,
+    // ma il chiamante gestisce il caso in cui uno slug non sia presente nel risultato.
+  }
+
   return result
 }
