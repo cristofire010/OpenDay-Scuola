@@ -31,6 +31,7 @@ export function OpenVoltaExperience({
   const [stage, setStage] = useState<Stage>('welcome')
   const [displayName, setDisplayName] = useState('')
   const [groupSize, setGroupSize] = useState(1)
+  const [names, setNames] = useState<string[]>([])
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>(
     initialExperiment && stations.some((station) => station.slug === initialExperiment)
       ? [initialExperiment]
@@ -89,7 +90,7 @@ export function OpenVoltaExperience({
   return (
     <div className="min-h-svh bg-foreground text-foreground">
       <div className="relative min-h-svh overflow-hidden">
-        <div className="relative mx-auto flex min-h-svh w-full max-w-[1320px] flex-col px-4 py-4 sm:px-8 sm:py-6">
+        <div className="relative section-shell min-h-svh overflow-hidden">
           <header className="flex items-center justify-between gap-4 rounded-full border border-background/15 bg-background/10 px-4 py-2 text-background backdrop-blur-md">
             <Brand tone="light" />
             <Link
@@ -137,6 +138,20 @@ export function OpenVoltaExperience({
                     setStage('map')
                   }}
                 >
+                  {groupSize > 1 ? (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-sm font-bold text-foreground/70">+ {groupSize - names.length} altri nomi</span>
+                    {Array.from({ length: groupSize - names.length }, (_, i) => (
+                      <Input
+                        key={i}
+                        placeholder={`Nome persona ${names.length + i + 1}`}
+                        value={names[names.length + i] || ''}
+                        onChange={(event) => setNames(prev => [...prev, event.target.value])}
+                        className="h-12 rounded-lg border-input bg-card px-4 text-base"
+                      />
+                    ))}
+                  </div>
+                ) : (
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="participant-name" className="text-base font-bold">Come ti chiami?</Label>
                     <Input
@@ -152,6 +167,7 @@ export function OpenVoltaExperience({
                     />
                     <p className="text-sm text-muted-foreground">Basta il nome, non serve creare un account.</p>
                   </div>
+                )}
 
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="group-size" className="text-base font-bold">Quante persone siete?</Label>
