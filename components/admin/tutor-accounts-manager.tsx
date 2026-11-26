@@ -25,11 +25,16 @@ function generatePassword(length = 12) {
   return Array.from(bytes, (byte) => PASSWORD_ALPHABET[byte % PASSWORD_ALPHABET.length]).join('')
 }
 
+// L'apostrofo non separa le parti del nome utente: "D'Angelo" diventa "dangelo",
+// non "d.angelo". Restano separatori solo gli spazi e gli altri segni.
+const APOSTROPHES = /['\u2018\u2019\u0060\u00b4]/g
+
 function suggestUsername(name: string) {
   return name
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .replace(APOSTROPHES, '')
     .replace(/[^a-z0-9]+/g, '.')
     .replace(/^\.+|\.+$/g, '')
     .slice(0, 32)
@@ -295,7 +300,7 @@ export function TutorAccountsManager({ accounts }: { accounts: TutorAccountView[
             <Input
               id="new-username"
               value={form.username}
-              onChange={(event) => update('username', event.target.value.toLowerCase())}
+              onChange={(event) => update('username', event.target.value.toLowerCase().replace(APOSTROPHES, ''))}
               placeholder="giulia.rinaldi"
               autoCapitalize="none"
               spellCheck={false}

@@ -41,8 +41,8 @@ async function main() {
     for (const [index, e] of experiments.entries()) {
       await client.query(
         `insert into open_day_stations
-           (slug, station_code, title, guide_name, guide_role, room, meeting_point, directions, accent, sort_order)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+           (slug, station_code, title, guide_name, guide_role, room, meeting_point, directions, accent, capacity, sort_order)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
          on conflict (slug) do update set
            station_code = excluded.station_code,
            title = excluded.title,
@@ -52,8 +52,22 @@ async function main() {
            meeting_point = excluded.meeting_point,
            directions = excluded.directions,
            accent = excluded.accent,
+           capacity = greatest(open_day_stations.capacity, excluded.capacity),
            sort_order = excluded.sort_order`,
-        [e.slug, e.station, e.title, e.guide, e.guideRole, e.room, e.meetingPoint, e.directions, e.accent, index],
+        [
+          e.slug,
+          e.station,
+          e.title,
+          e.guide,
+          e.guideRole,
+          e.room,
+          e.meetingPoint,
+          e.directions,
+          e.accent,
+          // La tappa finale accoglie tutti i gruppi, quindi ha capienza praticamente illimitata.
+          e.mandatory ? 100000 : 36,
+          index,
+        ],
       )
     }
     console.log(`✓ ${experiments.length} postazioni caricate`)

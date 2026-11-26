@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ScanLine } from 'lucide-react'
 import { Brand } from '@/components/brand'
 import { LogoutButton } from '@/components/auth/logout-button'
+import { BulletinBoard } from '@/components/tutor/bulletin-board'
 import { TutorBoard } from '@/components/tutor/tutor-board'
 import { requireRole } from '@/lib/auth'
 import { getTutorAccount, listTutorAccounts } from '@/lib/tutor-accounts'
@@ -42,9 +42,6 @@ export default async function TutorPage() {
         <div className="section-shell flex h-[72px] items-center justify-between gap-4">
           <Brand />
           <div className="flex items-center gap-1">
-            {session.role === 'staff' && (
-              <Link href="/staff" className="rounded-lg px-3 py-2 text-base font-bold hover:bg-muted">Regia</Link>
-            )}
             <LogoutButton />
           </div>
         </div>
@@ -62,6 +59,9 @@ export default async function TutorPage() {
         </p>
         <div className="mt-8">
           <TutorBoard tutors={tutors} identity={identity} />
+        </div>
+        <div className="mt-12">
+          <BulletinBoard canPublish={session.role === 'staff'} />
         </div>
       </main>
     </div>

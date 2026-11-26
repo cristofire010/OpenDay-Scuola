@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { asc, desc, eq, inArray } from 'drizzle-orm'
-import { ArrowLeft, KeyRound, ShieldCheck, UsersRound } from 'lucide-react'
+import { KeyRound, Megaphone, ShieldCheck, UsersRound } from 'lucide-react'
 import { Brand } from '@/components/brand'
 import { LogoutButton } from '@/components/auth/logout-button'
 import { GroupManager, type ManagedGroup, type StationOption, type TutorOption } from '@/components/admin/group-manager'
@@ -109,9 +109,9 @@ export default async function GruppiPage() {
               <KeyRound aria-hidden="true" />
               Accessi tutor
             </Button>
-            <Button nativeButton={false} render={<Link href="/staff" />} variant="ghost" className="h-10 rounded-lg">
-              <ArrowLeft aria-hidden="true" />
-              Regia
+            <Button nativeButton={false} render={<Link href="/admin/bacheca" />} variant="ghost" className="h-10 rounded-lg">
+              <Megaphone aria-hidden="true" />
+              Bacheca
             </Button>
             <LogoutButton redirectTo="/admin/accesso" />
           </div>

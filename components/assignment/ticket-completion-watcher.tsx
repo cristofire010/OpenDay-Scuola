@@ -14,7 +14,7 @@ export function TicketCompletionWatcher({ id }: { id: string }) {
     let active = true
     let checking = false
     let prevQueued: boolean | null = null
-    let prevTutorName: string | null = null
+    let prevTutorName: string | null | undefined
 
     async function check() {
       if (checking) return
@@ -22,13 +22,22 @@ export function TicketCompletionWatcher({ id }: { id: string }) {
 
       try {
         const response = await fetch(`/api/assignments/${id}/status`, { cache: 'no-store' })
-        if (!active || !response.ok) return
+        if (!active) return
+
+        // Il gruppo è stato eliminato dalla regia: il biglietto non esiste più.
+        // Senza questo, il polling ignorava il 404 e la pagina restava ferma sul
+        // vecchio biglietto come se fosse ancora valido.
+        if (response.status === 404) {
+          window.location.reload()
+          return
+        }
+        if (!response.ok) return
 
         const status = (await response.json()) as QueueStatus
         if (!active) return
 
         // Aggiorna la posizione in coda direttamente nel DOM, senza ricaricare la pagina.
-        document.querySelectorAll<HTMLElement>('#queue-position').forEach((el) => {
+        document.querySelectorAll<HTMLElement>('[data-queue-position]').forEach((el) => {
           if (typeof status.position === 'number') {
             el.textContent = String(status.position)
           }
@@ -38,6 +47,14 @@ export function TicketCompletionWatcher({ id }: { id: string }) {
         // server-side (il nome del tutor, le indicazioni e il QR restano uguali, ma il
         // biglietto passa da "in attesa" a "tutor assegnato").
         if (prevQueued === true && status.queued !== true && status.tutorName) {
+          window.location.reload()
+          return
+        }
+
+        // Il tutor è stato disattivato o cambiato: il biglietto deve aggiornarsi senza
+        // aspettare un refresh manuale (nome nuovo oppure ritorno in coda).
+        const tutorChanged = prevTutorName !== undefined && (status.tutorName ?? null) !== prevTutorName
+        if (tutorChanged) {
           window.location.reload()
           return
         }

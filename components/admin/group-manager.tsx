@@ -274,6 +274,35 @@ export function GroupManager({
     setGroups(initialGroups)
   }, [initialGroups])
 
+  // La coda avanza anche per effetto di altre azioni (turni chiusi dai tutor,
+  // gruppi eliminati): ricarica l'elenco per non mostrare stati vecchi.
+  useEffect(() => {
+    let cancelled = false
+
+    async function syncGroups() {
+      try {
+        const response = await fetch('/api/admin/groups', { cache: 'no-store' })
+        if (!response.ok) return
+        const result = await response.json() as { groups?: ManagedGroup[] }
+        if (!cancelled && result.groups) setGroups(result.groups)
+      } catch {
+        // Silenzioso: il prossimo giro riprova.
+      }
+    }
+
+    const timer = window.setInterval(syncGroups, 5000)
+    const onFocus = () => { void syncGroups() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+  }, [])
+
   // Count calculations
   const totalCount = groups.length
   const totalVisitors = groups.reduce((sum, group) => sum + (group.groupSize || 1), 0)

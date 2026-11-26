@@ -68,6 +68,25 @@ export const openDayTutorAccounts = pgTable('open_day_tutor_accounts', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+export const openDaySettings = pgTable('open_day_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const openDayBulletinMessages = pgTable(
+  'open_day_bulletin_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    authorName: text('author_name').notNull(),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('open_day_bulletin_messages_created_idx').on(table.createdAt),
+  ],
+)
+
 export const openDayRateLimits = pgTable('open_day_rate_limits', {
   key: text('key').primaryKey(),
   windowStart: timestamp('window_start', { withTimezone: true }).notNull().defaultNow(),

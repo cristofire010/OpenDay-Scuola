@@ -58,11 +58,10 @@ export async function POST(request: Request) {
   if (Array.isArray(rawSelection)) {
     if (
       rawSelection.length < 1
-      || rawSelection.length > 6
       || rawSelection.some((slug) => typeof slug !== 'string' || !SLUG_PATTERN.test(slug))
       || new Set(rawSelection).size !== rawSelection.length
     ) {
-      return NextResponse.json({ error: 'Scegli da una a sei tappe diverse.' }, { status: 400 })
+      return NextResponse.json({ error: 'Scegli almeno una tappa, senza ripeterla.' }, { status: 400 })
     }
     selectedStationSlugs = rawSelection
   } else if (rawSelection !== null && rawSelection !== undefined) {

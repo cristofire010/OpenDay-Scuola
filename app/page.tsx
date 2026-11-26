@@ -8,7 +8,7 @@ import { DEVICE_COOKIE_NAME } from '@/lib/device'
 
 export const metadata: Metadata = {
   title: 'OpenVolta — Open Day della Scuola',
-  description: 'Inquadra il QR, scrivi il tuo nome e la dimensione del gruppo, scegli i laboratori sulla mappa e ricevi il tutor.',
+  description: 'Inquadra il QR, scrivi il tuo nome e la dimensione del gruppo, scegli i laboratori dall’elenco e ricevi il tutor.',
 }
 
 export const dynamic = 'force-dynamic'

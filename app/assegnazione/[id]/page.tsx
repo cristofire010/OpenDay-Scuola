@@ -1,12 +1,11 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import QRCode from 'qrcode'
-import { ArrowLeft, Clock, MapPin } from 'lucide-react'
+import { Clock, MapPin } from 'lucide-react'
 import { Brand } from '@/components/brand'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/assignment/badge'
 import { TicketCompletionWatcher } from '@/components/assignment/ticket-completion-watcher'
+import { TripEnded } from '@/components/assignment/trip-ended'
 import { getAssignment, getQueueStatus } from '@/lib/assignments'
 import { getExperiment } from '@/lib/experiments'
 import { formatScanCode } from '@/lib/scan-codes'
@@ -21,7 +20,11 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
   const { id } = await params
   const assignment = await getAssignment(id)
 
-  if (!assignment || assignment.participant.completedAt) notFound()
+  if (!assignment) notFound()
+
+  // Turno concluso: il biglietto non è "sparito", è stato completato. Mostriamo
+  // uno stato esplicito invece della generica pagina "biglietto non trovato".
+  if (assignment.participant.completedAt) return <TripEnded reason="completed" />
 
   const { participant, station } = assignment
   const stops = assignment.stops
@@ -54,12 +57,8 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
     <div className="min-h-screen bg-[#F4F7FB]">
       <TicketCompletionWatcher id={id} />
       <header className="border-b bg-white/70 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-[820px] items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-[820px] items-center px-4 sm:px-6">
           <Brand className="[&_svg]:size-6 [&_span]:text-sm sm:[&_svg]:size-7 sm:[&_span]:text-base" />
-          <Button nativeButton={false} render={<Link href="/join" />} variant="ghost" className="h-8 rounded-full px-3 text-xs shadow-sm sm:h-9 sm:px-4 sm:text-sm">
-            <ArrowLeft aria-hidden="true" className="mr-1.5" />
-            Nuova iscrizione
-          </Button>
         </div>
       </header>
 
@@ -77,7 +76,7 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
               <div className="mb-5 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-amber-800 sm:mb-6 sm:p-5">
                 <Clock className="shrink-0 size-5 text-amber-600" aria-hidden="true" />
                 <p className="text-sm font-semibold sm:text-base">
-                  Sei in coda, posizione <span className="tabular-nums font-bold" id="queue-position">{queuePosition}</span>.
+                  Sei in coda, posizione <span className="tabular-nums font-bold" data-queue-position>{queuePosition}</span>.
                   Il tuo tutor ti verrà assegnato automaticamente: mostra questo biglietto quando sei chiamato.
                 </p>
               </div>
@@ -144,7 +143,7 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
                   <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500 sm:text-xs">Tutor assegnato</p>
                   {isQueued ? (
                     <p className="text-lg font-bold leading-tight text-gray-400">
-                      In attesa <span className="tabular-nums text-base" id="queue-position">{queuePosition}</span>ª in coda
+                      In attesa <span className="tabular-nums text-base" data-queue-position>{queuePosition}</span>ª in coda
                     </p>
                   ) : (
                     <p className="text-lg font-bold leading-tight text-[#141C3A]">{tutorName}</p>

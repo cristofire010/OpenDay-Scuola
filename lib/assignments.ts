@@ -2,7 +2,7 @@ import { randomInt } from 'node:crypto'
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { openDayParticipantStations, openDayParticipants, openDayStations, openDayTutorAccounts } from '@/lib/db/schema'
-import type { ExperimentAccent } from '@/lib/experiments'
+import { FINAL_STOP_SLUG, isMandatorySlug, type ExperimentAccent } from '@/lib/experiments'
 import type { StaffOverview, StationAvailability } from '@/lib/open-day-types'
 import { SCAN_ALPHABET, SCAN_CODE_LENGTH } from '@/lib/scan-codes'
 import { pickTutor } from '@/lib/tutor-matching'
@@ -13,6 +13,12 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 
 type StationRow = typeof openDayStations.$inferSelect
 export const MAX_ASSIGNMENTS_PER_DEVICE = 4
+
+/** Ogni giro si chiude con la tappa finale obbligatoria. */
+function withFinalStop(slugs: string[]) {
+  if (!FINAL_STOP_SLUG || slugs.includes(FINAL_STOP_SLUG)) return slugs
+  return [...slugs, FINAL_STOP_SLUG]
+}
 
 /** Codice breve stampato sotto il QR del biglietto. */
 function createScanCode() {
@@ -63,8 +69,11 @@ function buildOverview(stationRows: StationRow[], stationOccupancy: Record<strin
 }
 
 export async function getStaffOverview(): Promise<StaffOverview> {
-  const stationRows = await db
+  const allStationRows = await db
     .select().from(openDayStations).where(eq(openDayStations.active, true)).orderBy(asc(openDayStations.sortOrder))
+
+  // La tappa finale accoglie tutti i gruppi e non entra nei conteggi delle postazioni.
+  const stationRows = allStationRows.filter((station) => !isMandatorySlug(station.slug))
 
   const stationOccupancy = await getStationOccupancy(stationRows.map((s) => s.slug))
 
@@ -100,21 +109,22 @@ export async function queuePositionOf(id: string): Promise<number | null> {
   const row = my[0]
   if (!row) return null
 
-  const [count] = await db
+  // Quanti gruppi in coda sono arrivati prima di questo: la posizione è quel numero + 1.
+  const [ahead] = await db
     .select({ position: sql<number>`count(*)::integer` })
     .from(openDayParticipants)
     .where(
       and(
         eq(openDayParticipants.status, 'queued'),
-        sql`(${openDayParticipants.createdAt}, ${openDayParticipants.id}) <= (${row.createdAt}::timestamptz, ${row.id}::uuid)`,
+        sql`(${openDayParticipants.createdAt}, ${openDayParticipants.id}) < (${row.createdAt}::timestamptz, ${row.id}::uuid)`,
       ),
     )
 
-  return count?.position ?? null
+  return (ahead?.position ?? 0) + 1
 }
 
 /** Carico attuale dei tutor: gruppi già assegnati e tappe di ciascun gruppo. */
-async function getTutorLoads(database: Queryable) {
+export async function getTutorLoads(database: Queryable) {
   const tutors = await database
     .select({ name: openDayTutorAccounts.displayName })
     .from(openDayTutorAccounts)
@@ -199,8 +209,11 @@ export async function createAssignment(
       .orderBy(asc(openDayStations.sortOrder))
       .for('update')
 
+    // La tappa finale non è scegliibile: la aggiunge sempre il server in fondo al giro.
+    const selectableRows = stationRows.filter((station) => !isMandatorySlug(station.slug))
+
     if (requestedStationSlugs && requestedStationSlugs.some(
-      (slug) => !stationRows.some((station) => station.slug === slug),
+      (slug) => !selectableRows.some((station) => station.slug === slug),
     )) {
       throw new AssignmentError('NOT_FOUND', 'La postazione scelta non è disponibile.')
     }
@@ -216,7 +229,7 @@ export async function createAssignment(
     // Persone già attese in ogni laboratorio (senza turni, il conteggio è unico).
     const routeOptions: string[][] = requestedStationSlugs
       ? [requestedStationSlugs]
-      : stationRows
+      : selectableRows
           .map((station) => [station.slug])
           .sort(() => Math.random() - 0.5)
 
@@ -224,8 +237,11 @@ export async function createAssignment(
     let fittingSlugs: string[] | undefined
     let anyRouteAvailable = false
 
-    for (const slugs of routeOptions) {
+    for (const requestedSlugs of routeOptions) {
+      const slugs = withFinalStop(requestedSlugs)
       const fits = slugs.every((slug) => {
+        // La tappa finale accoglie sempre tutti i gruppi.
+        if (isMandatorySlug(slug)) return true
         const station = stationRows.find((row) => row.slug === slug)
         // Se non c'è occupazione registrata per questo station, assumiamo 0
         // (getStationOccupancy restituisce solo gli station con almeno un partecipante)
@@ -364,6 +380,8 @@ export async function promoteNextFromQueue(): Promise<boolean> {
 
     const occupancyOf = (slug: string) => occupancyRows.find((row) => row.slug === slug)?.occupancy ?? 0
     for (const slug of slugs) {
+      // La tappa finale non ha limiti di capienza.
+      if (isMandatorySlug(slug)) continue
       const station = stationRows.find((row) => row.slug === slug)
       if (!station || occupancyOf(slug) > station.capacity) return false
     }
@@ -380,6 +398,65 @@ export async function promoteNextFromQueue(): Promise<boolean> {
 
     return updated.length > 0
   })
+}
+
+/**
+ * Riassegna i gruppi ancora aperti affidati a `tutorName`.
+ *
+ * - Se c'è un tutor attivo con capienza, il gruppo passa a lui.
+ * - Se non c'è nessuno (per esempio era l'unico tutor), il gruppo NON può restare
+ *   appeso al tutor disattivato: si azzera il nome e lo si rimette in coda, così il
+ *   biglietto mostra "In attesa di un tutor libero" e il polling lo assegna appena
+ *   un tutor si libera.
+ */
+export async function reassignTutorGroups(tutorName: string, database: Queryable & Pick<typeof db, 'update'> = db) {
+  const participants = await database
+    .select({
+      id: openDayParticipants.id,
+      groupSize: openDayParticipants.groupSize,
+    })
+    .from(openDayParticipants)
+    .where(and(
+      eq(openDayParticipants.assignedTutorName, tutorName),
+      isNull(openDayParticipants.completedAt),
+    ))
+
+  for (const participant of participants) {
+    const stops = await database
+      .select({ stationSlug: openDayParticipantStations.stationSlug })
+      .from(openDayParticipantStations)
+      .where(eq(openDayParticipantStations.participantId, participant.id))
+      .orderBy(asc(openDayParticipantStations.sortOrder))
+
+    if (stops.length === 0) continue
+
+    const slugs = stops.map((stop) => stop.stationSlug)
+
+    // Riletto a ogni giro: dopo l'assegnazione precedente il carico è cambiato.
+    const loads = await getTutorLoads(database)
+    const newTutorName = pickTutor(loads, slugs, participant.groupSize)
+
+    if (newTutorName) {
+      await database
+        .update(openDayParticipants)
+        .set({ assignedTutorName: newTutorName })
+        .where(eq(openDayParticipants.id, participant.id))
+    } else {
+      await database
+        .update(openDayParticipants)
+        .set({ assignedTutorName: null, status: 'queued' })
+        .where(eq(openDayParticipants.id, participant.id))
+    }
+  }
+}
+
+/** Promuove dalla coda tutti i gruppi che un tutor libero riesce a prendere. */
+export async function promoteQueuedGroups() {
+  // promoteNextFromQueue toglie un gruppo dalla coda a ogni successo, quindi il
+  // ciclo termina quando la coda non ha più gruppi servibili.
+  while (await promoteNextFromQueue()) {
+    // continua
+  }
 }
 
 /** Stato completato per il partecipante. Dipende solo da completedAt. */

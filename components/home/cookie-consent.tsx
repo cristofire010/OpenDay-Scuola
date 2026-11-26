@@ -44,7 +44,7 @@ export function CookieConsent() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 bg-background/95 border-t border-border z-50 px-4 py-3 shadow-xl max-w-2xl mx-auto"
+      className="sticky top-0 z-50 w-full border-b border-border bg-background/95 px-4 py-3 shadow-xl"
     >
       <div className="max-w-2xl mx-auto w-full">
         <p className="text-sm text-foreground/80 mb-2">

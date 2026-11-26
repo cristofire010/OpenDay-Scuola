@@ -13,6 +13,8 @@
   --color-arancio-foreground: var(--arancio-foreground);
   --color-verde: var(--verde);
   --color-verde-foreground: var(--verde-foreground);
+  --color-viola: var(--viola);
+  --color-viola-foreground: var(--viola-foreground);
   --color-giallo: var(--giallo);
   --color-giallo-foreground: var(--giallo-foreground);
   --color-line: var(--line);
@@ -74,6 +76,8 @@
   --arancio-foreground: oklch(0.22 0.06 265);
   --verde: oklch(0.7 0.18 155);
   --verde-foreground: oklch(0.22 0.06 265);
+  --viola: oklch(0.55 0.2 300);
+  --viola-foreground: oklch(0.99 0 0);
   --giallo: oklch(0.91 0.17 98);
   --giallo-foreground: oklch(0.22 0.06 265);
   --primary: var(--blu);
@@ -110,6 +114,7 @@
 [data-line='blu'] { --line: var(--blu); --line-fg: var(--blu-foreground); --line-soft: oklch(0.94 0.04 265); }
 [data-line='arancio'] { --line: var(--arancio); --line-fg: var(--arancio-foreground); --line-soft: oklch(0.95 0.05 60); }
 [data-line='verde'] { --line: var(--verde); --line-fg: var(--verde-foreground); --line-soft: oklch(0.95 0.05 155); }
+[data-line='viola'] { --line: var(--viola); --line-fg: var(--viola-foreground); --line-soft: oklch(0.94 0.05 300); }
 
 @layer base {
   * {

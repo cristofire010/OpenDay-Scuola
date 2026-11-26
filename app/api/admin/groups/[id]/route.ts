@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { asc, eq, inArray } from 'drizzle-orm'
+import { promoteQueuedGroups } from '@/lib/assignments'
 import { guardApi } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { openDayParticipantStations, openDayParticipants, openDayStations } from '@/lib/db/schema'
@@ -171,6 +172,12 @@ export async function PATCH(
       }
     })
 
+    // Una modifica può liberare capacità (turno chiuso, tutor tolto, gruppo più piccolo):
+    // la coda deve avanzare subito, senza aspettare il polling del biglietto.
+    await promoteQueuedGroups().catch((error) => {
+      console.error('Avanzamento della coda dopo la modifica del gruppo non riuscito', error)
+    })
+
     return NextResponse.json({ group: updated })
   } catch (error) {
     console.error('Errore nell’aggiornamento del gruppo:', error)
@@ -203,6 +210,11 @@ export async function DELETE(
     if (deleted.length === 0) {
       return NextResponse.json({ error: 'Gruppo non trovato.' }, { status: 404 })
     }
+
+    // Eliminare un gruppo libera il tutor che lo seguiva: servi subito chi è in coda.
+    await promoteQueuedGroups().catch((error) => {
+      console.error('Avanzamento della coda dopo l’eliminazione del gruppo non riuscito', error)
+    })
 
     return NextResponse.json({ ok: true, deleted: id })
   } catch (error) {

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { getStaffOverview } from '@/lib/assignments'
 import { OpenVoltaExperience } from '@/components/home/openvolta-experience'
 
 type CookieConsentState = 'idle' | 'shown' | 'accepted'
@@ -18,11 +17,6 @@ export function HomeWrapper({ stations, children }: HomeWrapperProps) {
   const [hasExistingTicket, setHasExistingTicket] = useState(false)
 
   useEffect(() => {
-    ;(async () => {
-      const data = await getStaffOverview()
-      // stations prop is already passed from page.tsx
-    })()
-
     const checkConsent = () => {
       const consentGiven = localStorage.getItem('openvolta_cookie_consent') === 'yes'
       if (!consentGiven) return

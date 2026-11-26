@@ -1,12 +1,14 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowLeft, KeyRound, ShieldCheck, UsersRound } from 'lucide-react'
+import { KeyRound, Megaphone, ShieldCheck, UsersRound } from 'lucide-react'
 import { Brand } from '@/components/brand'
 import { LogoutButton } from '@/components/auth/logout-button'
+import { SharedTutorPassword } from '@/components/admin/shared-tutor-password'
 import { TutorAccountsManager } from '@/components/admin/tutor-accounts-manager'
 import { Button } from '@/components/ui/button'
 import { requireRole } from '@/lib/auth'
 import { listTutorAccounts } from '@/lib/tutor-accounts'
+import { getSharedTutorPasswordState } from '@/lib/tutor-settings'
 
 export const metadata: Metadata = {
   title: 'Accessi tutor',
@@ -17,6 +19,7 @@ export const dynamic = 'force-dynamic'
 export default async function AdminPage() {
   await requireRole('staff', '/admin')
   const accounts = await listTutorAccounts()
+  const sharedPassword = await getSharedTutorPasswordState()
 
   const serialized = accounts.map((account) => ({
     ...account,
@@ -34,13 +37,13 @@ export default async function AdminPage() {
               <KeyRound aria-hidden="true" />
               Accessi tutor
             </Button>
+            <Button nativeButton={false} render={<Link href="/admin/bacheca" />} variant="ghost" className="h-10 rounded-lg">
+              <Megaphone aria-hidden="true" />
+              Bacheca
+            </Button>
             <Button nativeButton={false} render={<Link href="/admin/gruppi" />} variant="ghost" className="h-10 rounded-lg">
               <UsersRound aria-hidden="true" />
               Gestione gruppi
-            </Button>
-            <Button nativeButton={false} render={<Link href="/staff" />} variant="ghost" className="h-10 rounded-lg">
-              <ArrowLeft aria-hidden="true" />
-              Regia
             </Button>
             <LogoutButton redirectTo="/admin/accesso" />
           </div>
@@ -63,6 +66,10 @@ export default async function AdminPage() {
         </p>
 
         <div className="mt-8">
+          <SharedTutorPassword initialState={sharedPassword} />
+        </div>
+
+        <div className="mt-10">
           <TutorAccountsManager accounts={serialized} />
         </div>
       </main>

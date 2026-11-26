@@ -1,7 +1,7 @@
 /** Regole con cui i gruppi vengono affidati ai tutor. */
 
-/** Un tutor accompagna al massimo due gruppi. */
-export const MAX_GROUPS_PER_TUTOR = 2
+/** Un tutor accompagna al massimo un gruppo. */
+export const MAX_GROUPS_PER_TUTOR = 1
 
 /** E oltre i dodici ragazzi in tutto non ne prende altri. */
 export const MAX_TUTOR_PEOPLE = 12

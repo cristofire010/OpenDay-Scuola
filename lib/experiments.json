@@ -64,6 +64,38 @@
     ]
   },
   {
+    "slug": "specchi-e-illusioni",
+    "number": "07",
+    "title": "Specchi e illusioni",
+    "shortDescription": "Due specchi, un raggio e un trucco ottico: scopri come nasce un’immagine che sembra vera.",
+    "description": "Con due specchi piani costruiamo immagini multiple e giochiamo con gli angoli. Poi proviamo a distinguere un oggetto reale dalla sua immagine riflessa, cambiando posizione e inclinazione.",
+    "question": "Perché uno specchio può far sembrare che ci sia qualcosa che non c’è?",
+    "image": "",
+    "imageAlt": "",
+    "category": "Luce e suono",
+    "duration": "20 min",
+    "age": "11–16 anni",
+    "station": "A3",
+    "room": "Laboratorio Ottica · Piano 1",
+    "meetingPoint": "Accoglienza, sotto il cartello blu A3",
+    "directions": "Segui la linea blu fino al primo piano. A3 è il terzo banco, in fondo all’aula vicino alla lavagna.",
+    "guide": "Elena Marchetti",
+    "guideRole": "Tutor · 4ªD",
+    "guideInitials": "EM",
+    "accent": "blu",
+    "materials": [
+      "Due specchi piani",
+      "Torcia",
+      "Oggetti piccoli",
+      "Goniometro"
+    ],
+    "steps": [
+      "Allinea i due specchi",
+      "Conta le immagini riflesse",
+      "Cambia l’angolo e confronta"
+    ]
+  },
+  {
     "slug": "moto-quasi-perfetto",
     "number": "03",
     "title": "Moto (quasi) perfetto",
@@ -128,6 +160,38 @@
     ]
   },
   {
+    "slug": "energia-in-caduta",
+    "number": "08",
+    "title": "Energia in caduta",
+    "shortDescription": "Lascia cadere, misura e trasforma: l’energia cambia forma ma non si perde.",
+    "description": "Con una rampa, una biglia e un cronometro seguiamo la discesa e stimiamo quanta energia potenziale diventa movimento. Poi proviamo a rallentarla con un ostacolo.",
+    "question": "Dove finisce l’energia di un oggetto che scende?",
+    "image": "",
+    "imageAlt": "",
+    "category": "Moto",
+    "duration": "25 min",
+    "age": "12–17 anni",
+    "station": "B3",
+    "room": "Laboratorio Meccanica · Piano terra",
+    "meetingPoint": "Accoglienza, sotto il cartello arancione B3",
+    "directions": "Segui la linea arancione fino al Laboratorio Meccanica. B3 è il banco in fondo, accanto alla rampa regolabile.",
+    "guide": "Marco Fabbri",
+    "guideRole": "Tutor · 5ªD",
+    "guideInitials": "MF",
+    "accent": "arancio",
+    "materials": [
+      "Rampa regolabile",
+      "Biglia d’acciaio",
+      "Cronometro",
+      "Metro"
+    ],
+    "steps": [
+      "Misura l’altezza di partenza",
+      "Cronometra la discesa",
+      "Confronta due altezze diverse"
+    ]
+  },
+  {
     "slug": "onde-in-corda",
     "number": "05",
     "title": "Onde in una corda",
@@ -164,7 +228,7 @@
     "number": "06",
     "title": "Il motore impossibile",
     "shortDescription": "Una pila, un magnete e un filo di rame: costruisci un motore con tre soli elementi.",
-    "description": "Il motore omopolare è un piccolo concentrato di elettromagnetismo. Monterrai il circuito, osserverai la rotazione e proverai a invertirla cambiando il verso della corrente o del campo magnetico.",
+    "description": "Il motore omopolare è un piccolo concentrato di elettromagnetismo. Monterai il circuito, osserverai la rotazione e proverai a invertirla cambiando il verso della corrente o del campo magnetico.",
     "question": "Da dove arriva la forza che mette in rotazione un semplice filo?",
     "image": "/images/esperimento-motore.webp",
     "imageAlt": "Un filo di rame forma un piccolo motore omopolare sopra una pila e un magnete",
@@ -189,6 +253,70 @@
       "Costruisci il supporto di rame",
       "Chiudi il circuito e osserva il moto",
       "Inverti il campo e confronta la rotazione"
+    ]
+  },
+  {
+    "slug": "circuiti-in-serie",
+    "number": "09",
+    "title": "Circuiti in serie",
+    "shortDescription": "Accendi, spegni, collega: due lampadine raccontano come viaggia la corrente.",
+    "description": "Montiamo un circuito con due lampadine e un interruttore. Osserviamo cosa succede quando una si svita e confrontiamo il collegamento in serie con quello in parallelo.",
+    "question": "Perché in un circuito una lampadina può spegnere anche l’altra?",
+    "image": "",
+    "imageAlt": "",
+    "category": "Elettricità",
+    "duration": "20 min",
+    "age": "11–17 anni",
+    "station": "C3",
+    "room": "Aula Onde · Piano 1",
+    "meetingPoint": "Accoglienza, sotto il cartello verde C3",
+    "directions": "Segui la linea verde fino al primo piano e prosegui a destra. C3 è il terzo banco dell’Aula Onde.",
+    "guide": "Chiara Rizzo",
+    "guideRole": "Tutor · 4ªE",
+    "guideInitials": "CR",
+    "accent": "verde",
+    "materials": [
+      "Pila da 4,5 V",
+      "Due lampadine",
+      "Interruttore",
+      "Cavi con coccodrilli"
+    ],
+    "steps": [
+      "Collega le lampadine in serie",
+      "Svita una lampadina e osserva",
+      "Prova il collegamento in parallelo"
+    ]
+  },
+  {
+    "slug": "gran-finale",
+    "number": "10",
+    "title": "Il gran finale",
+    "shortDescription": "L’ultima tappa di ogni giro: un momento collettivo in Aula Magna per chiudere il percorso insieme.",
+    "description": "La tappa finale è uguale per tutti i biglietti e viene aggiunta automaticamente in fondo al percorso. In Aula Magna il gruppo ritrova gli altri partecipanti e chiude l’esperienza con una breve dimostrazione collettiva.",
+    "question": "Che cosa abbiamo imparato oggi, mettendo insieme tutte le tappe?",
+    "image": "",
+    "imageAlt": "",
+    "category": "Finale",
+    "duration": "15 min",
+    "age": "Tutte le età",
+    "station": "D1",
+    "room": "Aula Magna · Piano terra",
+    "meetingPoint": "Accoglienza, davanti all’Aula Magna",
+    "directions": "Torna all’accoglienza e segui il cartello viola D1: l’Aula Magna è di fronte all’ingresso.",
+    "guide": "Accoglienza OpenVolta",
+    "guideRole": "Staff OpenVolta",
+    "guideInitials": "AC",
+    "accent": "viola",
+    "mandatory": true,
+    "materials": [
+      "Aula Magna allestita",
+      "Proiezione finale",
+      "Attestato del giro"
+    ],
+    "steps": [
+      "Ritrova il gruppo in Aula Magna",
+      "Rivedi le tappe del giro",
+      "Chiudi l’esperienza con la dimostrazione finale"
     ]
   }
 ]

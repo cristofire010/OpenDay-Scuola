@@ -2,6 +2,7 @@ import { asc, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { openDayTutorAccounts } from '@/lib/db/schema'
 import { hashPassword, verifyPassword, type Session } from '@/lib/auth'
+import { verifySharedTutorPassword } from '@/lib/tutor-settings'
 
 export const USERNAME_PATTERN = /^[a-z0-9][a-z0-9._-]{2,31}$/
 export const MIN_PASSWORD_LENGTH = 8
@@ -66,7 +67,11 @@ export async function authenticateTutor(username: string, password: string): Pro
 
   const account = rows[0]
   if (!account || !account.active) return null
-  if (!verifyPassword(password, account.passwordHash)) return null
+
+  // Password personale oppure, se lo staff l'ha attivata, quella comune a tutti i tutor.
+  const personalPassword = verifyPassword(password, account.passwordHash)
+  const sharedPassword = personalPassword ? false : await verifySharedTutorPassword(password)
+  if (!personalPassword && !sharedPassword) return null
 
   await db
     .update(openDayTutorAccounts)
